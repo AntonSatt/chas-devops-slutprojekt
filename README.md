@@ -20,8 +20,9 @@ Deadline 2026-10-25, Final Lab 2026-10-26. Alla ska kunna förklara alla delar.
 ## CI-variabler
 
 Inga hemligheter i git. Allt ligger under *Settings > CI/CD > Variables*,
-som **protected** (bara `main` får dem, feature-grenar kan inte ändra
-infrastrukturen).
+masked men inte protected, så att pipelines på grenar också kan testa.
+Skyddet ligger i pipelinen i stället: på grenar körs bara validate och
+`terraform plan`, apply, Ansible och destroy körs bara på `main`.
 
 | Variabel | Innehåll |
 |---|---|
