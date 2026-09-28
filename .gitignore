@@ -1,0 +1,25 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+crash.log
+
+# Genererade artefakter
+generated/
+ansible/inventory.ini
+kubeconfig
+*.kubeconfig
+
+# Nycklar och hemligheter
+*.pem
+*.key
+id_*
+group1_hetzner
+.env
+.envrc
+
+# Ansible
+.ansible/
+ansible/collections/
