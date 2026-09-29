@@ -5,6 +5,7 @@ terraform {
       version = "~> 1.69"
     }
   }
+  backend "http" {}
 }
 
 # Token läses från miljövariabeln HCLOUD_TOKEN
