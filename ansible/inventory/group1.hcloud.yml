@@ -1,0 +1,5 @@
+plugin: hetzner.hcloud.hcloud
+label_selector: cluster=group1
+groups:
+  cp_first: inventory_hostname == "cp1"
+  cp_rest: inventory_hostname != "cp1"
