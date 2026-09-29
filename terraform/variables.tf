@@ -9,6 +9,7 @@ variable "admin_cidr" {
 }
 
 variable "worker_ip" {
-  description = "Publik IPv4 för den dedikerade servern"
+  description = "Publik IPv4 för den dedikerade servern. Samma adress står i ansible/inventory/worker.ini"
   type        = string
+  default     = "203.0.113.10"
 }

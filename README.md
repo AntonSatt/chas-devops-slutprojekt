@@ -56,8 +56,11 @@ Hetzners API direkt och läser aldrig Terraform-state.
 | Variabel | Värde |
 |---|---|
 | `ssh_public_key` | samma som CI-variabeln `TF_VAR_ssh_public_key` |
-| `worker_ip` | den dedikerade serverns IP |
 | `admin_cidr` | se varning nedan |
+
+`worker_ip` har ett standardvärde i koden och behöver inte sättas. Adressen
+är publik och statisk, så den står i git precis som i
+`ansible/inventory/worker.ini`. Ändras den måste båda filerna ändras.
 
 Lägg alltihop i en `.envrc` i repots rot (gitignorerad, laddas av direnv),
 aldrig med `export` direkt i terminalen, eftersom det hamnar i
@@ -68,7 +71,6 @@ export HCLOUD_TOKEN=...
 export GITLAB_ACCESS_TOKEN=...
 export TF_STATE_NAME=grupprojekt-terraform-state
 export TF_VAR_ssh_public_key=...
-export TF_VAR_worker_ip=...
 export TF_VAR_admin_cidr=...
 ```
 
