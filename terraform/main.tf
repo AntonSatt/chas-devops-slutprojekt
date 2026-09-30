@@ -24,7 +24,7 @@ resource "hcloud_server" "cp" {
   for_each = toset(["cp1", "cp2", "cp3"])
 
   name        = each.key
-  image       = "ubuntu-24.04"
+  image       = "ubuntu-26.04"
   server_type = "cx23"
   location    = "fsn1"
   ssh_keys    = [hcloud_ssh_key.group.id]
