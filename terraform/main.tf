@@ -9,42 +9,48 @@ terraform {
 }
 
 # Token läses från miljövariabeln HCLOUD_TOKEN
-provider "hcloud" {}
+provider "hcloud" {
+  token = var.hcloud_token
+}
 
 # --- SSH-nyckel -------------------------------------------------------------
 
-resource "hcloud_ssh_key" "group" {
+data "hcloud_ssh_key" "group" {
   name       = "group1"
-  public_key = var.ssh_public_key
 }
 
 # --- Tre control plane-noder ------------------------------------------------
 
-resource "hcloud_server" "cp" {
-  for_each = toset(["cp1", "cp2", "cp3"])
+resource "hcloud_server" "nodes" {
+  for_each = {
+    for i in range(0, var.node_count) : 
+    "${var.cluster_name}-node-${i < var.control_plane_count ? "cp" : "wk"}-${i < var.control_plane_count ? i : i - var.control_plane_count}" => {
+      control_plane = i < var.control_plane_count
+    }
+  }
 
   name        = each.key
   image       = "ubuntu-26.04"
   server_type = "cx23"
   location    = "fsn1"
-  ssh_keys    = [hcloud_ssh_key.group.id]
-  labels      = { role = "control_plane", cluster = "group1" }
+  ssh_keys    = [data.hcloud_ssh_key.group.id]
+  labels      = { role = each.value.control_plane ? "control_plane" : "worker", cluster = var.cluster_name }
 }
 
 # --- Brandvägg för control plane --------------------------------------------
 
 locals {
-  cp_ips   = [for s in hcloud_server.cp : "${s.ipv4_address}/32"]
+  cp_ips   = [for s in hcloud_server.nodes : "${s.ipv4_address}/32"]
   node_ips = concat(local.cp_ips, ["${var.worker_ip}/32"])
 }
 
 resource "hcloud_firewall" "cp" {
-  name = "k3s-control-plane"
+  name = "${var.cluster_name}-k3s-control-plane"
 
   # Kopplas via label, inte via firewall_ids på servern — annars blir det ett
   # beroendecirkel, eftersom reglerna nedan behöver serverns IP.
   apply_to {
-    label_selector = "role=control_plane,cluster=group1"
+    label_selector = "role=control_plane,cluster=${var.cluster_name}"
   }
 
   # SSH — skolan kontrollerar åtkomsten automatiskt från okända adresser
