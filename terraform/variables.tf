@@ -13,3 +13,22 @@ variable "worker_ip" {
   type        = string
   default     = "203.0.113.10"
 }
+
+variable "hcloud_token" {
+  type    = string
+}
+
+variable "cluster_name" {
+  type = string
+  default = "asdf"
+}
+
+variable "node_count" {
+  type = number
+  default = 3
+}
+
+variable "control_plane_count" {
+  type = number
+  default = 3
+}
