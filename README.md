@@ -39,8 +39,10 @@ Skicka aldrig värden i klartext i en kanal.
 ## Terraform från din egen dator
 
 Terraform-state ligger i GitLab (*Operate > Terraform states*), inte i en fil
-på någons laptop. Alla som kör Terraform läser och skriver samma state, och
-ser därmed samma servrar. Tills pipelinen kör `apply` gör vi det lokalt.
+på någons laptop. Var och en har en egen state och ett eget kluster, med sitt
+namn som prefix på alla resurser. Den delade staten
+`grupprojekt-terraform-state` är prod (`cluster_name = group1`) och ändras
+bara via merge request.
 
 Ska du bara köra Ansible behöver du inget av detta. Inventoryn frågar
 Hetzners API direkt och läser aldrig Terraform-state.
@@ -55,7 +57,7 @@ Hetzners API direkt och läser aldrig Terraform-state.
 | Variabel | Värde |
 |---|---|
 | `cluster_name` | ditt eget namn för dev-miljö, tex 'thomas'. Prod är 'group1' och sätts snart bara av CI :) |
-| `admin_cidr` | se varning nedan |
+| `admin_cidr` | din publika IP som `1.2.3.4/32`, den enda som når port 6443 på ditt kluster |
 
 `worker_ip` har ett standardvärde i koden och behöver inte sättas. Adressen
 är publik och statisk, så den står i git precis som i
@@ -68,7 +70,7 @@ skalhistoriken:
 ```bash
 export HCLOUD_TOKEN=...
 export GITLAB_ACCESS_TOKEN=...
-export TF_STATE_NAME=grupprojekt-terraform-state
+export GITLAB_USER_NAME=<ditt-gitlab-namn>
 export TF_VAR_cluster_name=...
 export TF_VAR_admin_cidr=...
 ```
@@ -77,38 +79,36 @@ Kör `direnv allow` efter varje ändring i filen.
 
 ### Init
 
-En gång per klon, från `terraform/`. Byt `<ditt-gitlab-namn>` mot ditt
-användarnamn:
+Från `terraform/`. Byt `<ditt-namn>` mot samma namn som du har i
+`cluster_name`, t.ex. `thomas-state`:
 
 ```bash
-terraform init \
-    -backend-config="address=https://git.chas-lab.dev/api/v4/projects/582/terraform/state/$TF_STATE_NAME" \
-    -backend-config="lock_address=https://git.chas-lab.dev/api/v4/projects/582/terraform/state/$TF_STATE_NAME/lock" \
-    -backend-config="unlock_address=https://git.chas-lab.dev/api/v4/projects/582/terraform/state/$TF_STATE_NAME/lock" \
-    -backend-config="username=<ditt-gitlab-namn>" \
-    -backend-config="password=$GITLAB_ACCESS_TOKEN" \
-    -backend-config="lock_method=POST" \
-    -backend-config="unlock_method=DELETE" \
-    -backend-config="retry_wait_min=5"
+./setup.sh <ditt-namn>-state
 ```
 
-Får du `address argument is required` har du kört `terraform init` utan
-flaggorna. Kör sedan `terraform plan`. Står det `No changes` är du på samma
-servrar som alla andra.
+Scriptet pekar Terraform mot din egen state i GitLab. Den syns under
+*Operate > Terraform states* först efter din första `apply`. Kör scriptet
+igen med ett annat namn för att byta state. Ingenting kopieras mellan dem.
+
+Får du `address argument is required` har du kört `terraform init` direkt i
+stället för scriptet.
+
+Kör sedan `terraform plan`. På en ny state ska den bara visa `+` för
+`<ditt-namn>-*`. Visar den `-` eller `~` på något som inte heter ditt namn
+står du på fel state: kör inte `apply`.
 
 ### Regler
 
-- **`plan` får alla köra.** Den ändrar ingenting.
-- **`apply` bara från `main`, och säg till i Discord först.** State vet
-  inget om grenar: kör du `apply` från din gren blir din gren verklighet för
-  hela gruppen, även om den aldrig mergas.
-- **Aldrig `destroy`** utan att gruppen bestämt det. Det river allas maskiner.
-- **`admin_cidr` styr vem som når port 6443.** Sätter du din egen IP och kör
-  `apply` byter brandväggen till din adress, och alla andra blir utelåsta
-  från Kubernetes API. Visar `plan` en ändring på `hcloud_firewall.cp` som du
-  inte avsåg: kör inte `apply`.
-- **Säger `plan` att state är låst** kör någon annan just nu. Vänta. Använd
-  `terraform force-unlock` bara om du vet att ingen körning pågår.
+- **Din egen state är din.** `plan`, `apply` och `destroy` så mycket du vill,
+  från vilken gren som helst. Det påverkar bara servrar med ditt namn.
+- **Riv innan du slutar för dagen** med `terraform destroy`. Servrarna kostar
+  per timme och spelreglerna kräver det.
+- **Kör aldrig `setup.sh grupprojekt-terraform-state`.** Prod ändras via
+  merge request, inte från någons dator. Ett `destroy` där river gruppens
+  kluster.
+- **Säger `plan` att state är låst** kör du redan Terraform i ett annat
+  fönster. Använd `terraform force-unlock` bara om du vet att ingen körning
+  pågår.
 
 ## Spelregler
 
