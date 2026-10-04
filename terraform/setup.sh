@@ -33,7 +33,7 @@ if [[ -z "$GITLAB_USER_NAME" ]]; then
 fi
 
 
-$cmd init -migrate-state \
+$cmd init -reconfigure \
     -backend-config="address=$STATE_URL/$TF_STATE_NAME" \
     -backend-config="lock_address=$STATE_URL/$TF_STATE_NAME/lock" \
     -backend-config="unlock_address=$STATE_URL/$TF_STATE_NAME/lock" \
