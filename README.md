@@ -28,7 +28,6 @@ Skyddet ligger i pipelinen i stället: på grenar körs bara validate och
 |---|---|
 | `HCLOUD_TOKEN` | Hetzner API-token (masked) |
 | `TF_VAR_tsig_secret` | TSIG-secret för DNS (masked) |
-| `TF_VAR_ssh_public_key` | gruppens publika SSH-nyckel |
 | `GROUP1_SSH_KEY` | gruppens privata SSH-nyckel, typ File |
 | `MATTERMOST_WEBHOOK_URL` | webhook för larm (masked) |
 | `K3S_TOKEN` | klustrets join-token (masked) |
@@ -55,7 +54,7 @@ Hetzners API direkt och läser aldrig Terraform-state.
 
 | Variabel | Värde |
 |---|---|
-| `ssh_public_key` | samma som CI-variabeln `TF_VAR_ssh_public_key` |
+| `cluster_name` | ditt eget namn för dev-miljö, tex 'thomas'. Prod är 'group1' och sätts snart bara av CI :) |
 | `admin_cidr` | se varning nedan |
 
 `worker_ip` har ett standardvärde i koden och behöver inte sättas. Adressen
@@ -70,7 +69,7 @@ skalhistoriken:
 export HCLOUD_TOKEN=...
 export GITLAB_ACCESS_TOKEN=...
 export TF_STATE_NAME=grupprojekt-terraform-state
-export TF_VAR_ssh_public_key=...
+export TF_VAR_cluster_name=...
 export TF_VAR_admin_cidr=...
 ```
 
