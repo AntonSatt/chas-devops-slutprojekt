@@ -9,21 +9,19 @@ terraform {
 }
 
 # Token läses från miljövariabeln HCLOUD_TOKEN
-provider "hcloud" {
-  token = var.hcloud_token
-}
+provider "hcloud" {}
 
 # --- SSH-nyckel -------------------------------------------------------------
 
 data "hcloud_ssh_key" "group" {
-  name       = "group1"
+  name = "group1"
 }
 
 # --- Tre control plane-noder ------------------------------------------------
 
 resource "hcloud_server" "nodes" {
   for_each = {
-    for i in range(0, var.node_count) : 
+    for i in range(0, var.node_count) :
     "${var.cluster_name}-node-${i < var.control_plane_count ? "cp" : "wk"}-${i < var.control_plane_count ? i : i - var.control_plane_count}" => {
       control_plane = i < var.control_plane_count
     }

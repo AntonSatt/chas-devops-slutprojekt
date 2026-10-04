@@ -1,8 +1,3 @@
-variable "ssh_public_key" {
-  description = "Gruppens publika SSH-nyckel"
-  type        = string
-}
-
 variable "admin_cidr" {
   description = "Adressen som får nå Kubernetes API, t.ex. 1.2.3.4/32"
   type        = string
@@ -14,21 +9,17 @@ variable "worker_ip" {
   default     = "203.0.113.10"
 }
 
-variable "hcloud_token" {
-  type    = string
-}
-
 variable "cluster_name" {
-  type = string
-  default = "asdf"
+  type        = string
+  description = "Klustrets namn, prefix för alla resurser och värdet på labeln cluster. Eget namn för eget pill tex thomas, för prod group1."
 }
 
 variable "node_count" {
-  type = number
+  type    = number
   default = 3
 }
 
 variable "control_plane_count" {
-  type = number
+  type    = number
   default = 3
 }
