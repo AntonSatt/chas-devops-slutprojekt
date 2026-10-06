@@ -44,8 +44,7 @@ namn som prefix på alla resurser. Den delade staten
 `grupprojekt-terraform-state` är prod (`cluster_name = group1`) och ändras
 bara via merge request.
 
-Ska du bara köra Ansible behöver du inget av detta. Inventoryn frågar
-Hetzners API direkt och läser aldrig Terraform-state.
+Ska du bara köra Ansible behöver du inget av detta, se *Ansible* nedan.
 
 ### Det här behöver du
 
@@ -109,6 +108,27 @@ står du på fel state: kör inte `apply`.
 - **Säger `plan` att state är låst** kör du redan Terraform i ett annat
   fönster. Använd `terraform force-unlock` bara om du vet att ingen körning
   pågår.
+
+## Ansible
+
+Kör allt från `ansible/`, annars läses inte `ansible.cfg`. Du behöver
+`HCLOUD_TOKEN` och gruppens privata nyckel i `~/.ssh/group1_hetzner`.
+
+Inventoryn frågar Hetzners API direkt och läser aldrig Terraform-state. Den
+ser allas kluster, med en grupp per kluster: `cluster_<namn>`. Prod är
+`cluster_group1`, där även bare metal-workern ingår.
+
+**Rikta alltid mot ett kluster med `--limit`.** Utan den träffar körningen
+alla kluster, även prod och de andras. Kontrollera först vilka servrar som
+träffas:
+
+```bash
+ansible all --limit cluster_<ditt-namn> --list-hosts
+ansible-playbook <playbook> --limit cluster_<ditt-namn>
+```
+
+`ansible-inventory --graph` visar alla grupper men bryr sig inte om
+`--limit`, så den duger inte som kontroll.
 
 ## Spelregler
 
