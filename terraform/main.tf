@@ -17,22 +17,20 @@ data "hcloud_ssh_key" "group" {
   name = "group1"
 }
 
-# --- Tre control plane-noder ------------------------------------------------
+# --- Control plane-noder ----------------------------------------------------
+# Workern är bare metal-servern och skapas inte här, se var.worker_ip.
 
 resource "hcloud_server" "nodes" {
-  for_each = {
-    for i in range(0, var.node_count) :
-    "${var.cluster_name}-node-${i < var.control_plane_count ? "cp" : "wk"}-${i < var.control_plane_count ? i : i - var.control_plane_count}" => {
-      control_plane = i < var.control_plane_count
-    }
-  }
+  for_each = toset([
+    for i in range(var.control_plane_count) : "${var.cluster_name}-node-cp-${i}"
+  ])
 
   name        = each.key
   image       = "ubuntu-26.04"
   server_type = "cx23"
   location    = "fsn1"
   ssh_keys    = [data.hcloud_ssh_key.group.id]
-  labels      = { role = each.value.control_plane ? "control_plane" : "worker", cluster = var.cluster_name }
+  labels      = { role = "control_plane", cluster = var.cluster_name }
 }
 
 # --- Brandvägg för control plane --------------------------------------------

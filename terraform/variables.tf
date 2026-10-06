@@ -14,12 +14,8 @@ variable "cluster_name" {
   description = "Klustrets namn, prefix för alla resurser och värdet på labeln cluster. Eget namn för eget pill tex thomas, för prod group1."
 }
 
-variable "node_count" {
-  type    = number
-  default = 3
-}
-
 variable "control_plane_count" {
-  type    = number
-  default = 3
+  type        = number
+  description = "Antal control plane-VM:ar. 3 i prod, kan sättas lägre i en egen dev-miljö."
+  default     = 3
 }
