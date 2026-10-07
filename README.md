@@ -60,7 +60,8 @@ Ska du bara köra Ansible behöver du inget av detta, se *Ansible* nedan.
 
 `worker_ip` har ett standardvärde i koden och behöver inte sättas. Adressen
 är publik och statisk, så den står i git precis som i
-`ansible/inventory/worker.ini`. Ändras den måste båda filerna ändras.
+`ansible/inventory/worker.ini` och `dns/main.tf`. Ändras den måste alla tre
+filerna ändras.
 
 Lägg alltihop i en `.envrc` i repots rot (gitignorerad, laddas av direnv),
 aldrig med `export` direkt i terminalen, eftersom det hamnar i
@@ -129,6 +130,51 @@ ansible-playbook <playbook> --limit cluster_<ditt-namn>
 
 `ansible-inventory --graph` visar alla grupper men bryr sig inte om
 `--limit`, så den duger inte som kontroll.
+
+## DNS
+
+`dns/` skapar en enda post: `*.group-1.doe25.chas-lab.dev` pekar på
+workern. Traefik kan bara köras där, eftersom control planes har
+`NoSchedule`-taint, så varje app under `group-1` nås utan att någon behöver
+lägga till en egen post.
+
+Posterna skrivs till `ns1.chas-lab.dev` med RFC 2136, signerade med gruppens
+TSIG-nyckel. Nyckeln får bara skriva under `group-1`. `group-1` är ingen egen
+zon, så posten ligger i zonen `doe25.chas-lab.dev`.
+
+### En egen, delad state
+
+`dns/` har en state som heter `dns`, skild från klustrens. Posten finns en
+gång för hela gruppen och pekar på workern, som inte rivs. Låg den i
+`terraform/` skulle varje persons state försöka äga samma post, och en
+`destroy` på ditt kluster skulle ta bort den för alla.
+
+Därför gäller samma regel som för prod: `dns` ändras via merge request.
+Kör aldrig `terraform destroy` här.
+
+### Köra lokalt
+
+Utöver `GITLAB_ACCESS_TOKEN` och `GITLAB_USER_NAME` från avsnittet ovan
+behövs TSIG-secreten i `.envrc`. Värdet finns i CI-variabeln med samma namn:
+
+```bash
+export TF_VAR_tsig_secret=...
+```
+
+Från `dns/`:
+
+```bash
+../terraform/setup.sh dns
+terraform plan
+```
+
+Kontrollera att posten fungerar med valfritt namn under `group-1`:
+
+```bash
+dig +short test.group-1.doe25.chas-lab.dev
+```
+
+Ska ge workerns IP, `203.0.113.10`.
 
 ## Spelregler
 
