@@ -19,3 +19,9 @@ variable "control_plane_count" {
   description = "Antal control plane-VM:ar. 3 i prod, kan sättas lägre i en egen dev-miljö."
   default     = 3
 }
+
+variable "worker_count" {
+  type        = number
+  description = "Sätt till 1 om det behövs till egen dev-miljö. Gäller ej för prod."
+  default     = 1
+}

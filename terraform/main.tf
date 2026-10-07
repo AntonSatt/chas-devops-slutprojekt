@@ -33,11 +33,33 @@ resource "hcloud_server" "nodes" {
   labels      = { role = "control_plane", cluster = var.cluster_name }
 }
 
+# --- Worker-noder ----------------------------------------------------
+# Worker för egen dev-miljö
+
+resource "hcloud_server" "workers" {
+  for_each = toset([
+    for i in range(var.worker_count) : "${var.cluster_name}-node-worker-${i}"
+  ])
+
+  name        = each.key
+  image       = "ubuntu-26.04"
+  server_type = "cx23"
+  location    = "fsn1"
+  ssh_keys    = [data.hcloud_ssh_key.group.id]
+  labels      = { role = "worker", cluster = var.cluster_name }
+}
+
 # --- Brandvägg för control plane --------------------------------------------
+# Gäller bara control planes. Workers har ingen molnbrandvägg, där sköter
+# Ansible ufw — både på bare metal-workern i prod och på dev-workern.
+#
+# node_ips är alla noder i klustret: control planes, eventuell dev-worker och
+# prods bare metal-worker. worker_ips är tom när worker_count = 0.
 
 locals {
-  cp_ips   = [for s in hcloud_server.nodes : "${s.ipv4_address}/32"]
-  node_ips = concat(local.cp_ips, ["${var.worker_ip}/32"])
+  cp_ips     = [for s in hcloud_server.nodes : "${s.ipv4_address}/32"]
+  worker_ips = [for s in hcloud_server.workers : "${s.ipv4_address}/32"]
+  node_ips   = concat(local.cp_ips, local.worker_ips, ["${var.worker_ip}/32"])
 }
 
 resource "hcloud_firewall" "cp" {
