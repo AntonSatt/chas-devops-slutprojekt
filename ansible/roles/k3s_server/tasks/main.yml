@@ -1,0 +1,43 @@
+- name: Ser om k3s_token finns
+  ansible.builtin.assert:
+    that:
+      - k3s_token | length > 0
+    fail_msg: >-
+      K3S_TOKEN saknas i miljön. Skapa en egen token för ditt kluster, en gång:
+      echo "export K3S_TOKEN=$(openssl rand -hex 32)" >> .envrc
+      och kör sedan direnv allow (utan direnv: source .envrc i varje ny terminal).
+      Byt aldrig token på ett kluster som redan finns.
+    quiet: true
+
+- name: Laddar ner k3s-installationsskriptet
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /tmp/k3s-install.sh
+    mode: '0700'
+
+- name: Installerar k3s ifrån script
+  ansible.builtin.command:
+    cmd: /tmp/k3s-install.sh
+    creates: /usr/local/bin/k3s
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    K3S_TOKEN: "{{ k3s_token }}"
+    INSTALL_K3S_EXEC: >-
+      server {{ '--cluster-init' if inventory_hostname in groups['cp_first'] else '--server https://' ~ k3s_server_first_ip ~ ':6443' }}
+      --flannel-backend=wireguard-native
+      {{ '--node-taint node-role.kubernetes.io/control-plane:NoSchedule' if k3s_taint_control_planes else '' }}
+  no_log: true
+
+- name: Läser kubeconfig från noden
+  ansible.builtin.slurp:
+    src: /etc/rancher/k3s/k3s.yaml
+  register: k3s_server_kubeconfig
+  when: inventory_hostname in groups['cp_first']
+
+- name: Skriver kubeconfig lokalt med nodens publika adress
+  ansible.builtin.copy:
+    content: "{{ k3s_server_kubeconfig.content | b64decode | replace('127.0.0.1', ansible_host) }}"
+    dest: "{{ playbook_dir }}/../{{ cluster }}.kubeconfig"
+    mode: '0600'
+  delegate_to: localhost
+  when: inventory_hostname in groups['cp_first']

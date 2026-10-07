@@ -1,0 +1,7 @@
+group1_ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFdikvqZl3+2sSAfi5Hnv4S30uf3a6EZVp6zKAH9u/Yi group1-hetzner-lab"
+
+k3s_version: "v1.36.5+k3s1"
+
+k3s_token: "{{ lookup('ansible.builtin.env', 'K3S_TOKEN') }}"
+
+k3s_taint_control_planes: false
