@@ -1,0 +1,4 @@
+# Adressen till klustrets första control plane, som de övriga ansluter till.
+# groups['cp_first'] innehåller allas cp-0, så den snittas med det egna
+# klustrets grupp innan adressen hämtas.
+k3s_server_first_ip: "{{ hostvars[groups['cp_first'] | intersect(groups['cluster_' ~ cluster]) | first].ansible_host }}"

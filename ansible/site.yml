@@ -1,0 +1,40 @@
+- name: Grundkonfigurerar alla noder
+  hosts: "cluster_{{ cluster }}"
+  gather_facts: false
+
+  pre_tasks:
+    - name: Väntar tills noden svarar på SSH
+      ansible.builtin.wait_for_connection:
+        delay: 5
+        timeout: 300
+
+  tasks:
+    - name: Lägger in group1 som användare
+      ansible.builtin.user:
+        name: group1
+        shell: /bin/bash
+        create_home: true
+
+    - name: Lägger in .pub ssd
+      ansible.posix.authorized_key:
+        user: group1
+        state: present
+        key: "{{ group1_ssh_public_key }}"
+
+    - name: Ger användaren 'group1' sudo rättigheter utan lösenord
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/group1
+        content: "group1 ALL=(ALL) NOPASSWD:ALL\n"
+        mode: "0440"
+        validate: visudo -cf %s
+
+- name: Installerar k3s på första control planen
+  hosts: "cluster_{{ cluster }}:&cp_first"
+  roles:
+    - k3s_server
+
+- name: Ansluter övriga control planes
+  hosts: "cluster_{{ cluster }}:&cp_rest"
+  serial: 1
+  roles:
+    - k3s_server

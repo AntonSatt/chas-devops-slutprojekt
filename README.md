@@ -112,23 +112,42 @@ står du på fel state: kör inte `apply`.
 ## Ansible
 
 Kör allt från `ansible/`, annars läses inte `ansible.cfg`. Du behöver
-`HCLOUD_TOKEN` och gruppens privata nyckel i `~/.ssh/group1_hetzner`.
+`HCLOUD_TOKEN`, gruppens privata nyckel i `~/.ssh/group1_hetzner` och en
+egen `K3S_TOKEN`.
+
+`K3S_TOKEN` är join-token för ditt kluster. Alla control planes i ett kluster
+måste ha samma, så den skapas en gång och sparas i `.envrc`:
+
+```bash
+echo "export K3S_TOKEN=$(openssl rand -hex 32)" >> .envrc
+direnv allow
+```
+
+Utan direnv: kör `source .envrc` i varje ny terminal. Skapa inte en ny token
+med `export` direkt i terminalen, och byt aldrig token på ett kluster som
+redan finns, då kan resten av noderna inte ansluta. Din token gäller bara
+ditt kluster. Prod har en egen i CI-variabeln med samma namn. Saknas
+variabeln stoppar playbooken innan något installeras.
 
 Inventoryn frågar Hetzners API direkt och läser aldrig Terraform-state. Den
 ser allas kluster, med en grupp per kluster: `cluster_<namn>`. Prod är
 `cluster_group1`, där även bare metal-workern ingår.
 
-**Rikta alltid mot ett kluster med `--limit`.** Utan den träffar körningen
-alla kluster, även prod och de andras. Kontrollera först vilka servrar som
+**`site.yml` körs alltid mot ett kluster, som du väljer med `-e cluster`.**
+Playen riktas mot `cluster_{{ cluster }}`. Glömmer du `-e` avbryter Ansible
+med `'cluster' is undefined` innan något körs, i stället för att träffa alla
+kluster, även prod och de andras. Kontrollera först vilka servrar som
 träffas:
 
 ```bash
-ansible all --limit cluster_<ditt-namn> --list-hosts
-ansible-playbook <playbook> --limit cluster_<ditt-namn>
+ansible-playbook site.yml -e cluster=<ditt-namn> --list-hosts
+ansible-playbook site.yml -e cluster=<ditt-namn>
 ```
 
-`ansible-inventory --graph` visar alla grupper men bryr sig inte om
-`--limit`, så den duger inte som kontroll.
+Ad hoc-kommandon (`ansible all ...`) har inget sådant skydd. Där gäller
+`--limit cluster_<ditt-namn>`, annars träffas alla kluster. Observera att
+`ansible-inventory --graph` inte bryr sig om `--limit`, så den duger inte
+som kontroll.
 
 ## Spelregler
 
