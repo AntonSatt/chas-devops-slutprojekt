@@ -24,8 +24,8 @@ provider "dns" {
 
 # --- Wildcard-post ----------------------------------------------------------
 
-# Alla namn under group-1 pekar på workern. Traefik kan bara köras där,
-# eftersom control planes har NoSchedule-taint, så ingen app behöver en egen post.
+# Alla namn under group-1 pekar på workern. k3s svclb lyssnar på 80 och 443 där
+# och skickar vidare till Traefik var den än körs, så ingen app behöver en egen post.
 resource "dns_a_record_set" "wildcard" {
   # group-1 är ingen egen zon, posterna ligger i doe25.chas-lab.dev
   zone = "doe25.chas-lab.dev."

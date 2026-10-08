@@ -57,6 +57,7 @@ Ska du bara köra Ansible behöver du inget av detta, se *Ansible* nedan.
 |---|---|
 | `cluster_name` | ditt eget namn för dev-miljö, tex 'thomas'. Prod är 'group1' och sätts snart bara av CI :) |
 | `admin_cidr` | din publika IP som `1.2.3.4/32`, den enda som når port 6443 på ditt kluster |
+| `worker_count` | valfri, standard `0`. Sätt `1` för en worker-VM i ditt kluster, se *Workern* nedan. Sätts aldrig för prod |
 
 `worker_ip` har ett standardvärde i koden och behöver inte sättas. Adressen
 är publik och statisk, så den står i git precis som i
@@ -116,6 +117,13 @@ Kör allt från `ansible/`, annars läses inte `ansible.cfg`. Du behöver
 `HCLOUD_TOKEN`, gruppens privata nyckel i `~/.ssh/group1_hetzner` och en
 egen `K3S_TOKEN`.
 
+Collections installeras till `ansible/collections/` (gitignorerad). Kör om
+när `requirements.yml` har ändrats, annars hittar Ansible inte nya moduler:
+
+```bash
+ansible-galaxy collection install -r requirements.yml -p collections --force
+```
+
 `K3S_TOKEN` är join-token för ditt kluster. Alla control planes i ett kluster
 måste ha samma, så den skapas en gång och sparas i `.envrc`:
 
@@ -132,7 +140,8 @@ variabeln stoppar playbooken innan något installeras.
 
 Inventoryn frågar Hetzners API direkt och läser aldrig Terraform-state. Den
 ser allas kluster, med en grupp per kluster: `cluster_<namn>`. Prod är
-`cluster_group1`, där även bare metal-workern ingår.
+`cluster_group1`, där även bare metal-workern ingår. Gruppen `workers`
+innehåller bare metal-workern och alla worker-VM:ar i dev.
 
 **`site.yml` körs alltid mot ett kluster, som du väljer med `-e cluster`.**
 Playen riktas mot `cluster_{{ cluster }}`. Glömmer du `-e` avbryter Ansible
@@ -150,12 +159,49 @@ Ad hoc-kommandon (`ansible all ...`) har inget sådant skydd. Där gäller
 `ansible-inventory --graph` inte bryr sig om `--limit`, så den duger inte
 som kontroll.
 
+### Workern
+
+I prod har alla control planes `NoSchedule`-taint
+(`group_vars/cluster_group1.yml`), så workern är den enda nod där appar
+schemaläggs. Det kräver uppgiften. Klustrets egna komponenter, som CoreDNS
+och Traefik, tål taint och kan ändå hamna på en control plane.
+
+Dev har ingen taint och normalt ingen worker, så där kör control planes
+apparna. Fungerar något i dev men blir `Pending` i prod, kör
+`kubectl describe pod <namn>` och läs *Events*.
+
+Workern ansluter som k3s-agent till klustrets första control plane. Rollen
+`k3s_agent` sätter först upp ufw, sedan k3s. Öppna portar på workern:
+
+| Port | Från | Varför |
+|---|---|---|
+| 22/tcp | alla | SSH, öppnas före allt annat så att ingen låses ute |
+| 10250/tcp | klustrets control planes | kubelet: loggar, exec och metrics |
+| 51820/udp | klustrets control planes | WireGuard, krypterad pod-trafik mellan noderna |
+| alla | `10.42.0.0/16` | k3s poddnät, poddar som pratar med noden |
+| alla | `10.43.0.0/16` | k3s service-nät |
+| 80/tcp, 443/tcp | alla | ingress, wildcard-posten i DNS pekar hit |
+
+Regler som redan fanns på prod-workern lämnas orörda, ufw-modulen lägger
+bara till.
+
+**Testa workern i ditt eget kluster** innan prod. Sätt `worker_count = 1`,
+kör `terraform apply` och sedan:
+
+```bash
+ansible-playbook site.yml -e cluster=<ditt-namn> -e k3s_taint_control_planes=true
+```
+
+Med taint på alla control planes och en worker ser ditt kluster ut som prod.
+Taint sätts bara vid installation, så klustret måste vara nybyggt.
+
 ## DNS
 
 `dns/` skapar en enda post: `*.group-1.doe25.chas-lab.dev` pekar på
-workern. Traefik kan bara köras där, eftersom control planes har
-`NoSchedule`-taint, så varje app under `group-1` nås utan att någon behöver
-lägga till en egen post.
+workern. k3s lastbalanserare (`svclb`) lyssnar på 80 och 443 på varje nod,
+även workern, och skickar trafiken vidare till Traefik var den än körs. Varje
+app under `group-1` nås därför utan att någon behöver lägga till en egen
+post.
 
 Posterna skrivs till `ns1.chas-lab.dev` med RFC 2136, signerade med gruppens
 TSIG-nyckel. Nyckeln får bara skriva under `group-1`. `group-1` är ingen egen

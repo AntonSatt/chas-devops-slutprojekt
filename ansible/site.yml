@@ -38,3 +38,8 @@
   serial: 1
   roles:
     - k3s_server
+
+- name: Ansluter workers som k3s-agenter
+  hosts: "cluster_{{ cluster }}:&workers"
+  roles:
+    - k3s_agent

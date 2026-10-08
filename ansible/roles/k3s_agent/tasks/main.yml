@@ -1,0 +1,75 @@
+- name: Ser om k3s_token finns
+  ansible.builtin.assert:
+    that:
+      - k3s_token | length > 0
+    fail_msg: >-
+      K3S_TOKEN saknas i miljön. Skapa en egen token för ditt kluster, en gång:
+      echo "export K3S_TOKEN=$(openssl rand -hex 32)" >> .envrc
+      och kör sedan direnv allow (utan direnv: source .envrc i varje ny terminal).
+      Byt aldrig token på ett kluster som redan finns.
+    quiet: true
+
+- name: Vill inte låsa oss själva ute, släpper in SSH först.
+  community.general.ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+
+- name: Släpper in kubelet från klustrets control planes
+  community.general.ufw:
+    rule: allow
+    port: "10250"
+    proto: tcp
+    from_ip: "{{ hostvars[item].ansible_host }}"
+  loop: "{{ groups['cluster_' ~ cluster] | intersect(groups['cp_first'] + groups['cp_rest']) }}"
+
+- name: Släpper in Wireguard ifrån klustrets control planes
+  community.general.ufw:
+    rule: allow
+    port: "51820"
+    proto: udp
+    from_ip: "{{ hostvars[item].ansible_host }}"
+  loop: "{{ groups['cluster_' ~ cluster] | intersect(groups['cp_first'] + groups['cp_rest']) }}"
+
+- name: Släpper in trafik från k3s poddnät
+  community.general.ufw:
+    rule: allow
+    from_ip: 10.42.0.0/16
+
+- name: Släpper in trafik från k3s service-nät
+  community.general.ufw:
+    rule: allow
+    from_ip: 10.43.0.0/16
+
+- name: Släpper in HTTP för ingress
+  community.general.ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+
+- name: Släpper in HTTPS för ingress
+  community.general.ufw:
+    rule: allow
+    port: "443"
+    proto: tcp
+
+- name: Slår på ufw
+  community.general.ufw:
+    state: enabled
+
+- name: Laddar ner k3s-installationsskriptet
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /tmp/k3s-install.sh
+    mode: '0700'
+
+- name: Installerar k3s ifrån script
+  ansible.builtin.command:
+    cmd: /tmp/k3s-install.sh
+    creates: /usr/local/bin/k3s
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    K3S_TOKEN: "{{ k3s_token }}"
+    INSTALL_K3S_EXEC: >-
+      agent --server https://{{ k3s_server_first_ip }}:6443
+  no_log: true

@@ -14,7 +14,7 @@ Samma namn används i varje lager:
 |---|---|---|
 | Terraform-variabel | `cluster_name` | `thomas` |
 | Terraform-state i GitLab | statens namn | `thomas-state` |
-| Hetzner | servernamn och brandvägg | `thomas-node-cp-0`, `thomas-k3s-control-plane` |
+| Hetzner | servernamn och brandvägg | `thomas-node-cp-0`, `thomas-node-worker-0`, `thomas-k3s-control-plane` |
 | Hetzner | label på servrarna | `cluster=thomas` |
 | Ansible | grupp i inventoryn | `cluster_thomas` |
 
@@ -69,6 +69,10 @@ Varje kluster får en egen brandvägg som kopplas via
 alltså aldrig hamna på någon annans servrar, och din `admin_cidr` påverkar
 bara ditt kluster.
 
+Workers får ingen molnbrandvägg, varken bare metal-workern i prod eller en
+worker-VM i dev. Där sköter Ansible ufw, så att dev-workern skyddas på samma
+sätt som prods och reglerna testas innan de når prod.
+
 ### `setup.sh` byter state utan att kopiera
 
 `setup.sh` kör `terraform init -reconfigure`, som bara byter vilken state
@@ -90,6 +94,8 @@ kluster dyker gruppen upp utan att filen ändras.
 
 Rollgrupperna `cp_first` och `cp_rest` finns i varje kluster. `cp_first` är
 noden som slutar på `-cp-0`, och `cp_rest` är övriga control planes.
+`workers` är servrar med labeln `role=worker`, plus bare metal-workern från
+`worker.ini`.
 
 ### Bare metal-workern hör bara till prod
 
@@ -97,23 +103,22 @@ Workern i `worker.ini` är en fysisk server och kan bara ingå i ett kluster.
 Den ligger därför i gruppen `cluster_group1` och kommer aldrig med i någons
 dev-kluster.
 
-### Därför `--limit`
+Behöver du testa något som rör workern skapar du i stället en egen
+worker-VM med `worker_count = 1`. Den får namnet `<namn>-node-worker-0` och
+labeln `role=worker`, och hamnar i `cluster_<namn>` och `workers` som alla
+andra servrar.
 
-En play riktar mot en roll, till exempel `hosts: cp_first`. Den rollen finns
-i alla kluster samtidigt. `--limit cluster_<namn>` väljer vilket kluster, så
-att samma playbook fungerar för alla miljöer.
+### Därför `-e cluster`
 
-| Körning | `hosts: cp_first` träffar |
+En play riktar mot en roll, till exempel `cp_first`. Den rollen finns i alla
+kluster samtidigt. Därför snävas varje play in till ett kluster:
+`hosts: "cluster_{{ cluster }}:&cp_first"`, och klustret väljs med
+`-e cluster=<namn>`.
+
+| Körning | play 2 träffar |
 |---|---|
-| utan `--limit` | första noden i **alla** kluster, även prod |
-| `--limit cluster_thomas` | bara `thomas-node-cp-0` |
+| `-e cluster=thomas` | bara `thomas-node-cp-0` |
+| utan `-e cluster` | ingenting, Ansible avbryter med `'cluster' is undefined` |
 
-Ett för snävt urval är ofarligt, eftersom Ansible hoppar över en play som
-inte matchar några servrar. Det farliga är att glömma `--limit`.
-
-## Kanske att fixa i framtiden
-
-- **Skydd mot glömd `--limit`.** Ett alternativ är att låta playbooken kräva
-  klustret som variabel, `hosts: "cluster_{{ cluster }}:&cp_first"` med
-  `-e cluster=thomas`. Då avbryts körningen om variabeln saknas. Tas när
-  första playbooken skrivs.
+Att glömma variabeln stoppar alltså körningen i stället för att träffa alla
+kluster, även prod.
