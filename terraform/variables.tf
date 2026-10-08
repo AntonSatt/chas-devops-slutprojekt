@@ -23,5 +23,5 @@ variable "control_plane_count" {
 variable "worker_count" {
   type        = number
   description = "Sätt till 1 om det behövs till egen dev-miljö. Gäller ej för prod."
-  default     = 1
+  default     = 0
 }
