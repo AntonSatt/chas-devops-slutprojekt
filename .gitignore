@@ -5,6 +5,11 @@
 *.tfvars
 *.tfvars.json
 crash.log
+# Lokala override-filer, t.ex. backend_override.tf för lokal state
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
 
 # Genererade artefakter
 generated/
