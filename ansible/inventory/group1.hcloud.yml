@@ -7,6 +7,7 @@ groups:
   # role-kontrollen är ett skydd: bara control planes ska hamna här, även om
   # någon annan server med labeln cluster skulle dyka upp i projektet.
   cp_rest: hcloud_labels.role == 'control_plane' and not inventory_hostname.endswith('-cp-0')
+  workers: hcloud_labels.role == 'worker'
 # En grupp per kluster: cluster_thomas, cluster_group1 osv.
 keyed_groups:
   - key: hcloud_labels.cluster
