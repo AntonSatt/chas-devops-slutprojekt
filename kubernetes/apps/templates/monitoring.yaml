@@ -1,0 +1,30 @@
+# Monitoring: kube-prometheus-stack med values från vårt repo.
+# Två källor: charten från tredjepartsrepot, values från vårt (ref: values).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: 91.8.1
+      helm:
+        valueFiles:
+          - $values/kubernetes/values/monitoring.yaml
+    - repoURL: {{ .Values.repoURL }}
+      targetRevision: {{ .Values.revision }}
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # Stackens CRD:er är för stora för vanlig kubectl apply.
+      - ServerSideApply=true
