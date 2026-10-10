@@ -1,0 +1,23 @@
+{{- if .Values.element.enabled }}
+# Element webs config.json. Den säger vilken server klienten ska prata med,
+# så användaren inte behöver skriva in den när den loggar in.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "synapse.fullname" . }}-element
+  labels:
+    {{- include "synapse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: element
+data:
+  config.json: |
+    {
+      "default_server_config": {
+        "m.homeserver": {
+          "base_url": "https://{{ .Values.ingress.synapseHost }}",
+          "server_name": {{ .Values.serverName | quote }}
+        }
+      },
+      "disable_custom_urls": true,
+      "disable_guests": true
+    }
+{{- end }}
