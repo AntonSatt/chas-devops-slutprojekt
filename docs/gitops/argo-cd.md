@@ -105,6 +105,8 @@ Kör från repots rot med `KUBECONFIG` satt, se README.
    required` under *Conditions*. Laga genom att köra playbooken igen.
 4. **Kör playbooken två gånger.** Andra gången ska control planen ge
    `changed=0`. Varför installeras inte Argo CD om?
+5. **selfHeal.** Se övning 2 i [larm.md](../monitoring/larm.md): ändra
+   något för hand och se Argo CD skriva tillbaka det.
 
 ## Troliga frågor
 
