@@ -1,0 +1,20 @@
+# Ansible gör Kubernetes-Secrets av CI-variablerna, och apparna pekar ut dem
+# med namn. Värdena skickas på stdin, så de hamnar aldrig i git eller i en
+# fil på noden.
+
+- name: Ser om alla hemligheter finns
+  ansible.builtin.assert:
+    that:
+      - app_secrets_grafana_admin_password | length > 0
+    fail_msg: >-
+      GRAFANA_ADMIN_PASSWORD saknas i miljön. I dev, skapa ett en gång:
+      echo "export GRAFANA_ADMIN_PASSWORD=$(openssl rand -hex 16)" >> .envrc
+    quiet: true
+
+- name: Skapar apparnas secrets
+  ansible.builtin.command:
+    cmd: kubectl apply -f -
+    stdin: "{{ lookup('ansible.builtin.template', 'secrets.yaml.j2') }}"
+  register: app_secrets_apply
+  changed_when: "'configured' in app_secrets_apply.stdout or 'created' in app_secrets_apply.stdout"
+  no_log: true

@@ -1,0 +1,3 @@
+# Hemligheter som apparna i klustret behöver. Från CI-variablerna, i dev från
+# din .envrc. Inget av det står i git.
+app_secrets_grafana_admin_password: "{{ lookup('ansible.builtin.env', 'GRAFANA_ADMIN_PASSWORD') }}"
