@@ -2,6 +2,8 @@ apiVersion: v2
 name: synapse
 description: Matrix Synapse med Element web som klient och Postgres som databas
 type: application
+# Bara för visning i verktyg som listar charts. Utan den ger helm lint en INFO-rad.
+icon: https://matrix.org/images/matrix-favicon.svg
 # Chartens egen version. Höj den när templates eller values ändras.
 version: 0.1.0
 # Synapse-versionen som charten är testad med. Imagen pinnas i values.yaml.
