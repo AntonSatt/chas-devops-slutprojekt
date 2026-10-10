@@ -1,0 +1,18 @@
+# Headless service (clusterIP: None) för Postgres. Den har ingen egen IP
+# utan DNS-namnet pekar direkt på podden. StatefulSeten kräver en sådan, och
+# Synapse ansluter via namnet synapse-postgres.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "synapse.postgresHost" . }}
+  labels:
+    {{- include "synapse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  clusterIP: None
+  selector:
+    {{- include "synapse.selectorLabels" (dict "ctx" . "component" "postgres") | nindent 4 }}
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
