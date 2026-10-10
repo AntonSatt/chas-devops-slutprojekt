@@ -15,13 +15,14 @@
     port: "22"
     proto: tcp
 
+# cp_rest finns inte när klustret bara har en control plane, därav default([]).
 - name: Släpper in kubelet från klustrets control planes
   community.general.ufw:
     rule: allow
     port: "10250"
     proto: tcp
     from_ip: "{{ hostvars[item].ansible_host }}"
-  loop: "{{ groups['cluster_' ~ cluster] | intersect(groups['cp_first'] + groups['cp_rest']) }}"
+  loop: "{{ groups['cluster_' ~ cluster] | intersect(groups['cp_first'] + groups['cp_rest'] | default([])) }}"
 
 - name: Släpper in Wireguard ifrån klustrets control planes
   community.general.ufw:
@@ -29,7 +30,7 @@
     port: "51820"
     proto: udp
     from_ip: "{{ hostvars[item].ansible_host }}"
-  loop: "{{ groups['cluster_' ~ cluster] | intersect(groups['cp_first'] + groups['cp_rest']) }}"
+  loop: "{{ groups['cluster_' ~ cluster] | intersect(groups['cp_first'] + groups['cp_rest'] | default([])) }}"
 
 - name: Släpper in trafik från k3s poddnät
   community.general.ufw:
