@@ -1,0 +1,54 @@
+# Values till kube-prometheus-stack: Prometheus, Grafana, Alertmanager,
+# node-exporter och kube-state-metrics i ett paket, redan ihopkopplade.
+# Versionen pinnas i kubernetes/apps/templates/monitoring.yaml.
+
+# k3s kör controller-manager, scheduler, proxy och etcd inne i k3s-processen,
+# inte som egna poddar. Stackens mål för dem hittar ingenting och ger bara
+# falska larm, så de stängs av.
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeEtcd:
+  enabled: false
+
+prometheus:
+  prometheusSpec:
+    # false = ta ServiceMonitors, PodMonitors och larmregler från hela
+    # klustret, inte bara från den här Helm-releasen. Det är det som gör att
+    # allas egna charts syns i Prometheus utan att någon rör monitoring.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    retention: 15d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+
+# node-exporter ger metrics för själva noderna (CPU, minne, disk). Den körs
+# på varje nod och måste tåla control planes taint, annars får vi bara
+# workern.
+prometheus-node-exporter:
+  tolerations:
+    - operator: Exists
+
+grafana:
+  admin:
+    # Skapas av Ansible från GRAFANA_ADMIN_PASSWORD. Chartens eget slumpade
+    # lösenord fungerar inte med Argo CD: det slumpas om vid varje synk.
+    existingSecret: grafana-admin
+  persistence:
+    enabled: true
+    size: 2Gi
+  sidecar:
+    dashboards:
+      # Dashboards laddas från ConfigMaps med labeln grafana_dashboard: "1",
+      # i alla namespaces. Så kan varje app ta med sin egen dashboard.
+      searchNamespace: ALL
