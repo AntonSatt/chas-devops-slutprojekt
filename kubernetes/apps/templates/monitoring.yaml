@@ -14,6 +14,11 @@ spec:
       helm:
         valueFiles:
           - $values/kubernetes/values/monitoring.yaml
+        # Alla larm får labeln cluster, så det syns i Mattermost om ett larm
+        # kommer från prod eller från någons dev-kluster.
+        parameters:
+          - name: prometheus.prometheusSpec.externalLabels.cluster
+            value: {{ .Values.cluster | quote }}
     - repoURL: {{ .Values.repoURL }}
       targetRevision: {{ .Values.revision }}
       ref: values
