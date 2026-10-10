@@ -33,6 +33,7 @@ Skyddet ligger i pipelinen i stället: på grenar körs bara validate och
 | `K3S_TOKEN` | klustrets join-token (masked) |
 | `GRAFANA_ADMIN_PASSWORD` | Grafana-admin (masked) |
 | `ARGOCD_REPO_USER` / `ARGOCD_REPO_TOKEN` | deploy-token så Argo CD kan läsa repot (token masked) |
+| `SYNAPSE_POSTGRES_PASSWORD` / `SYNAPSE_REGISTRATION_SHARED_SECRET` | Synapse lösenord till Postgres och hemligheten för att skapa användare (masked) |
 
 Skicka aldrig värden i klartext i en kanal.
 
@@ -318,6 +319,23 @@ Mattermost. Tillbaka till `0` ger OK. Alertmanager når du så här:
 ```bash
 kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-alertmanager 9093:9093
 ```
+
+## Synapse
+
+Matrix Synapse med Element web, en egen chart i `charts/synapse/`. Argo CD
+deployar den som appen `synapse`. Valen, övningar och hur man testar lokalt:
+[charts/synapse/README.md](charts/synapse/README.md).
+
+Secreten kommer från CI-variablerna `SYNAPSE_POSTGRES_PASSWORD` och
+`SYNAPSE_REGISTRATION_SHARED_SECRET`. I dev skapar du egna, en gång:
+
+```bash
+echo "export SYNAPSE_POSTGRES_PASSWORD=$(openssl rand -hex 16)" >> .envrc
+echo "export SYNAPSE_REGISTRATION_SHARED_SECRET=$(openssl rand -hex 32)" >> .envrc
+```
+
+Första användaren skapas med `register_new_matrix_user`, se
+`charts/synapse/templates/NOTES.txt`.
 
 ## Spelregler
 
