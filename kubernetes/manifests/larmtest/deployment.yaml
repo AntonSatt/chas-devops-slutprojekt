@@ -1,0 +1,29 @@
+# Övning för larmkedjan. Normalläget är replicas: 0.
+# Sätt 1 och pusha: larmet LarmtestAktiv löser ut och syns i Mattermost.
+# Tillbaka till 0: larmet clearas och ett OK kommer.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: larmtest
+  labels:
+    app: larmtest
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: larmtest
+  template:
+    metadata:
+      labels:
+        app: larmtest
+    spec:
+      containers:
+        - name: sleep
+          image: busybox:1.37
+          command: ["sleep", "infinity"]
+          resources:
+            requests:
+              cpu: 5m
+              memory: 8Mi
+            limits:
+              memory: 16Mi
