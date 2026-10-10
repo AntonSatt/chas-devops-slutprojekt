@@ -300,6 +300,25 @@ kubectl -n monitoring port-forward svc/monitoring-grafana 3000:80
 Prometheus på http://localhost:9090, Grafana på http://localhost:3000 som
 `admin`.
 
+## Larm
+
+Larmregler är PrometheusRules. Alertmanager skickar larm med `warning` eller
+`critical` till Mattermost och ett OK när de clearas. Rubriken säger vilket
+kluster larmet kommer från. Hur kedjan fungerar, och övningar:
+[docs/monitoring/larm.md](docs/monitoring/larm.md).
+
+Webhooken kommer från CI-variabeln `MATTERMOST_WEBHOOK_URL`, lägg den i
+`.envrc`. Dev-kluster larmar i samma kanal som prod, men rubriken visar
+vilket kluster det gäller.
+
+Testa kedjan med appen `larmtest`: sätt `replicas: 1` i
+`kubernetes/manifests/larmtest/deployment.yaml`, pusha och vänta på LARM i
+Mattermost. Tillbaka till `0` ger OK. Alertmanager når du så här:
+
+```bash
+kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-alertmanager 9093:9093
+```
+
 ## Spelregler
 
 Från `group-project.pdf`, avsnitt 6. Kontrolleras automatiskt och löpande.

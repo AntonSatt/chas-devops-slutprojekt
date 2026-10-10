@@ -14,6 +14,18 @@ kubeProxy:
 kubeEtcd:
   enabled: false
 
+# Operatorns admission-webhook kontrollerar larmregler innan de sparas. Den
+# får sitt certifikat av Helm-hooks som skriver in det i klustret. Argo CD
+# ser det som en avvikelse från git och synkar om, hooksen körs igen, och så
+# vidare: en loop som tog en hel CPU-kärna. Utan webhooken syns en trasig
+# regel i stället i operatorns logg. tls hör till webhooken och stängs av med
+# den.
+prometheusOperator:
+  admissionWebhooks:
+    enabled: false
+  tls:
+    enabled: false
+
 prometheus:
   prometheusSpec:
     # false = ta ServiceMonitors, PodMonitors och larmregler från hela
@@ -38,6 +50,48 @@ prometheus:
 prometheus-node-exporter:
   tolerations:
     - operator: Exists
+
+# Alertmanager tar emot larm från Prometheus och skickar dem vidare. Se
+# docs/monitoring/larm.md.
+alertmanager:
+  alertmanagerSpec:
+    # Secreten skapas av Ansible (rollen app_secrets) och monteras som fil i
+    # /etc/alertmanager/secrets/alertmanager-mattermost/.
+    secrets:
+      - alertmanager-mattermost
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      receiver: mattermost
+      group_by: [alertname, namespace]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      routes:
+        # Watchdog brinner alltid, som bevis på att kedjan lever, och
+        # InfoInhibitor är intern. Ingen av dem ska till kanalen.
+        - receiver: "null"
+          matchers:
+            - alertname =~ "Watchdog|InfoInhibitor"
+        # Bara warning och critical går till Mattermost.
+        - receiver: "null"
+          matchers:
+            - severity = "info"
+    receivers:
+      - name: "null"
+      - name: mattermost
+        # Mattermost tar emot samma format som Slacks webhooks.
+        slack_configs:
+          - api_url_file: /etc/alertmanager/secrets/alertmanager-mattermost/url
+            # Skicka ett OK när larmet clearas. Uppgiften kräver det.
+            send_resolved: true
+            username: alertmanager
+            title: '{{ if eq .Status "firing" }}LARM{{ else }}OK{{ end }} [{{ .CommonLabels.cluster }}]: {{ .CommonLabels.alertname }}'
+            text: >-
+              {{ range .Alerts }}{{ .Annotations.summary }}{{ if .Annotations.description }}
+              {{ .Annotations.description }}{{ end }}
+              {{ end }}
 
 grafana:
   admin:

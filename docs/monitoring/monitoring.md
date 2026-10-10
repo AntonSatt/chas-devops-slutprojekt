@@ -85,6 +85,11 @@ dashboards.
 - **Port 9100 är öppen mellan noderna.** Prometheus kör på workern och
   skrapar control planes via deras publika IP. Utan regeln i
   `terraform/main.tf` larmade `TargetDown` för node-exporter.
+- **Operatorns admission-webhook är avstängd.** Den får sitt certifikat av
+  Helm-hooks som skriver in det i klustret. Argo CD såg det som en
+  avvikelse från git och synkade om i en loop som tog en hel CPU-kärna,
+  och larmet `NodeSystemSaturation` gick till pending på dev-workern.
+  Hittat 2026-10-10 med `kubectl top pods -A` och controllerns logg.
 - **Grafanas lösenord kommer från en Secret**, `grafana-admin`, som rollen
   `app_secrets` gör av `GRAFANA_ADMIN_PASSWORD`. Chartens eget slumpade
   lösenord fungerar inte med Argo CD, eftersom det slumpas om vid varje
@@ -138,5 +143,8 @@ den en ingress på HTTPS.
 - *Varför är kubeScheduler avstängd?* Den finns inte som egen pod i k3s.
 - *Var sparas metrics?* På en PVC på noden där Prometheus kör, i 15 dagar.
   Byggs klustret om försvinner de.
+- *Argo CD drar mycket CPU. Hur felsöker du?* `kubectl top pods -A` visar
+  vilken pod. I application-controllerns logg syns vilka objekt som får den
+  att räkna om. Hos oss var det webhookens hooks, se ovan.
 - *Ett target är nere. Hur felsöker du?* *Status > Targets* visar felet.
   Ofta är det en brandvägg, som med port 9100.

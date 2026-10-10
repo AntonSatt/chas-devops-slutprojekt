@@ -1,0 +1,18 @@
+# Larmregeln. kube-state-metrics rapporterar hur många repliker som är
+# tillgängliga. Är det fler än noll i en minut brinner larmet.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: larmtest
+spec:
+  groups:
+    - name: larmtest
+      rules:
+        - alert: LarmtestAktiv
+          expr: kube_deployment_status_replicas_available{namespace="larmtest", deployment="larmtest"} > 0
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Larmtest: deploymenten larmtest kör {{ $value }} replik(er)"
+            description: "Sätt replicas till 0 i kubernetes/manifests/larmtest/deployment.yaml för att cleara."

@@ -12,10 +12,13 @@ spec:
     targetRevision: {{ argocd_revision | to_json }}
     path: kubernetes/apps
     helm:
-      # Alla appar följer samma gren som root-appen.
+      # Alla appar följer samma gren som root-appen, och får veta vilket
+      # kluster de kör i.
       parameters:
         - name: revision
           value: {{ argocd_revision | to_json }}
+        - name: cluster
+          value: {{ cluster | to_json }}
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
