@@ -110,4 +110,13 @@ resource "hcloud_firewall" "cp" {
     port       = "51820"
     source_ips = local.node_ips
   }
+
+  # node-exporter. Prometheus kör på workern och skrapar control planes via
+  # deras publika IP. Utan regeln larmar TargetDown för node-exporter.
+  rule {
+    direction  = "in"
+    protocol   = "tcp"
+    port       = "9100"
+    source_ips = local.node_ips
+  }
 }
