@@ -1,0 +1,30 @@
+# Övningsappen för larmkedjan, se docs/monitoring/larm.md.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: larmtest
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.repoURL }}
+    targetRevision: {{ .Values.revision }}
+    path: kubernetes/manifests/larmtest
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: larmtest
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # PrometheusRule kommer från monitoring. Finns den inte än vid första
+      # synken försöker appen igen i stället för att fastna.
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m
