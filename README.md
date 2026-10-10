@@ -241,6 +241,41 @@ dig +short test.group-1.doe25.chas-lab.dev
 
 Ska ge workerns IP, `203.0.113.10`.
 
+## GitOps (Argo CD)
+
+Efter k3s installerar `site.yml` Argo CD och en root-app. Sen kommer allt i
+klustret från git: en ny app är en ny fil i `kubernetes/apps/templates/`.
+Hur det hänger ihop, och övningar: [docs/gitops/argo-cd.md](docs/gitops/argo-cd.md).
+
+Argo CD måste kunna läsa repot. Lägg till i `.envrc`, värdena finns i
+CI-variablerna med samma namn. Som Developer ser du inte dem, skapa då en
+egen token med bara `read_repository`:
+
+```bash
+export ARGOCD_REPO_USER=...
+export ARGOCD_REPO_TOKEN=...
+```
+
+Ditt dev-kluster följer `main`. Ska det följa din gren, pusha grenen och
+kör playbooken med den:
+
+```bash
+MIN_GREN=feature/monitoring
+ansible-playbook site.yml -e cluster=$TF_VAR_cluster_name -e argocd_revision=$MIN_GREN
+```
+
+Status och UI, från repots rot. Port-forward går via port 6443, så det
+fungerar bara från din `admin_cidr`:
+
+```bash
+export KUBECONFIG=$PWD/$TF_VAR_cluster_name.kubeconfig
+kubectl -n argocd get applications
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo
+kubectl -n argocd port-forward svc/argocd-server 8080:80
+```
+
+Öppna http://localhost:8080 och logga in som `admin`.
+
 ## Spelregler
 
 Från `group-project.pdf`, avsnitt 6. Kontrolleras automatiskt och löpande.
