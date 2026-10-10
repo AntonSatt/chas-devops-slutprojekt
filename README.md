@@ -308,8 +308,8 @@ kluster larmet kommer från. Hur kedjan fungerar, och övningar:
 [docs/monitoring/larm.md](docs/monitoring/larm.md).
 
 Webhooken kommer från CI-variabeln `MATTERMOST_WEBHOOK_URL`, lägg den i
-`.envrc`. Dev-kluster larmar i samma kanal som prod, så riv ditt kluster när
-du är klar.
+`.envrc`. Dev-kluster larmar i samma kanal som prod, men rubriken visar
+vilket kluster det gäller.
 
 Testa kedjan med appen `larmtest`: sätt `replicas: 1` i
 `kubernetes/manifests/larmtest/deployment.yaml`, pusha och vänta på LARM i
