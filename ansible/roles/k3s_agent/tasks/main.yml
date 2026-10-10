@@ -32,6 +32,16 @@
     from_ip: "{{ hostvars[item].ansible_host }}"
   loop: "{{ groups['cluster_' ~ cluster] | intersect(groups['cp_first'] + groups['cp_rest'] | default([])) }}"
 
+# I prod kör Prometheus på workern och når node-exporter lokalt. I dev utan
+# taint kan den hamna på en control plane och skrapar då workern utifrån.
+- name: Släpper in node-exporter från klustrets control planes
+  community.general.ufw:
+    rule: allow
+    port: "9100"
+    proto: tcp
+    from_ip: "{{ hostvars[item].ansible_host }}"
+  loop: "{{ groups['cluster_' ~ cluster] | intersect(groups['cp_first'] + groups['cp_rest'] | default([])) }}"
+
 - name: Släpper in trafik från k3s poddnät
   community.general.ufw:
     rule: allow
