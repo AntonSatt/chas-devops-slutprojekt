@@ -1,0 +1,58 @@
+# Synapse konfiguration, homeserver.yaml. Inget hemligt står här:
+# lösenordet till Postgres kommer från miljövariabeln PGPASSWORD och
+# registreringshemligheten läses från en fil i Secreten. Därför går filen att
+# ha i en ConfigMap och i git.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "synapse.fullname" . }}
+  labels:
+    {{- include "synapse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: synapse
+data:
+  homeserver.yaml: |
+    server_name: {{ .Values.serverName | quote }}
+    # Adressen klienter når API:t på, via ingressen.
+    public_baseurl: "https://{{ .Values.ingress.synapseHost }}/"
+    report_stats: false
+
+    listeners:
+      # Klient-API:t. x_forwarded: Synapse ligger bakom Traefik och ska läsa
+      # klientens riktiga IP från X-Forwarded-For.
+      - port: 8008
+        type: http
+        x_forwarded: true
+        bind_addresses: ["0.0.0.0"]
+        resources:
+          # Bara klient-API:t. Ingen federation: servern pratar inte med
+          # andra Matrix-servrar.
+          - names: [client]
+    {{- if .Values.metrics.enabled }}
+      # Metrics på en egen port, så de inte går att nå via ingressen.
+      - port: 9000
+        type: metrics
+        bind_addresses: ["0.0.0.0"]
+    {{- end }}
+    enable_metrics: {{ .Values.metrics.enabled }}
+
+    database:
+      name: psycopg2
+      args:
+        host: {{ include "synapse.postgresHost" . }}
+        user: synapse
+        dbname: synapse
+        # Inget password här. psycopg2 läser PGPASSWORD från miljön.
+        cp_min: 5
+        cp_max: 10
+
+    # Allt som måste överleva en omstart ligger på volymen i /data.
+    media_store_path: /data/media_store
+    # Signeringsnyckeln är serverns identitet. Synapse skapar den själv vid
+    # första start om filen saknas.
+    signing_key_path: /data/signing.key
+    # Med den här hemligheten skapas användare med register_new_matrix_user,
+    # se NOTES.txt. Öppen registrering är avstängd (standard).
+    registration_shared_secret_path: /secrets/registration-shared-secret
+
+    # Ingen federation, så Synapse behöver inte hämta nycklar från matrix.org.
+    trusted_key_servers: []
