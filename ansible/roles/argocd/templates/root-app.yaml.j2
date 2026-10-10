@@ -1,0 +1,27 @@
+# Root-appen, den enda Application som skapas utanför Argo CD. Den pekar på
+# kubernetes/apps, och allt där synkar Argo CD själv från git.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: {{ argocd_repo_url | to_json }}
+    targetRevision: {{ argocd_revision | to_json }}
+    path: kubernetes/apps
+    helm:
+      # Alla appar följer samma gren som root-appen.
+      parameters:
+        - name: revision
+          value: {{ argocd_revision | to_json }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      # prune: det som tas bort ur git tas bort ur klustret.
+      # selfHeal: ändringar för hand i klustret skrivs tillbaka.
+      prune: true
+      selfHeal: true

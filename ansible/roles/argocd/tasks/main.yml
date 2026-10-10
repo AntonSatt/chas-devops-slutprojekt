@@ -65,3 +65,10 @@
   register: argocd_repo_secret
   changed_when: "'unchanged' not in argocd_repo_secret.stdout"
   no_log: true
+
+- name: Skapar root-appen, sen tar Argo CD över
+  ansible.builtin.command:
+    cmd: kubectl apply -f -
+    stdin: "{{ lookup('ansible.builtin.template', 'root-app.yaml.j2') }}"
+  register: argocd_root_app
+  changed_when: "'unchanged' not in argocd_root_app.stdout"

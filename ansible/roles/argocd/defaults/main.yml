@@ -8,3 +8,7 @@ argocd_chart_version: "10.9.2"
 argocd_repo_url: https://git.chas-lab.dev/devops-grupp-1/grupprojekt.git
 argocd_repo_user: "{{ lookup('ansible.builtin.env', 'ARGOCD_REPO_USER') }}"
 argocd_repo_token: "{{ lookup('ansible.builtin.env', 'ARGOCD_REPO_TOKEN') }}"
+
+# Grenen som Argo CD följer. main i prod. I ett dev-kluster kan du följa din
+# egen gren och testa innan merge, se docs/gitops/argo-cd.md.
+argocd_revision: main
