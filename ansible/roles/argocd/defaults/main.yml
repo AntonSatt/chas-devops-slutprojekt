@@ -1,0 +1,3 @@
+# Pinnade versioner, så att ett nybygge blir likadant som det förra.
+argocd_helm_version: "v4.2.4"
+argocd_chart_version: "10.9.2"
