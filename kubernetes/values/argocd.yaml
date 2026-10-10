@@ -1,0 +1,17 @@
+# Values till argo-cd-charten. Versionen pinnas i
+# ansible/roles/argocd/defaults/main.yml.
+#
+# Argo CD installeras av Ansible, inte av Argo självt: något måste finnas i
+# klustret innan Argo kan synka resten. Därför ligger filen här men används
+# bara av rollen argocd.
+
+configs:
+  params:
+    # UI:t ligger inte ute på internet, vi når det med port-forward. Inne i
+    # tunneln räcker vanlig HTTP.
+    server.insecure: true
+
+# Dex är för inloggning via GitLab eller SSO. Vi loggar in som admin, så den
+# behövs inte och tar bara minne.
+dex:
+  enabled: false
