@@ -2,6 +2,16 @@
 # så varken Helm eller kubectl behöver nå klustret utifrån. Port 6443 är
 # bara öppen för admin_cidr, så från CI hade det inte gått.
 
+- name: Ser om repo-token finns
+  ansible.builtin.assert:
+    that:
+      - argocd_repo_user | length > 0
+      - argocd_repo_token | length > 0
+    fail_msg: >-
+      ARGOCD_REPO_USER eller ARGOCD_REPO_TOKEN saknas i miljön. Argo CD
+      behöver dem för att läsa repot, se docs/gitops/argo-cd.md.
+    quiet: true
+
 - name: Kollar om Helm finns
   ansible.builtin.stat:
     path: /usr/local/bin/helm
@@ -46,3 +56,12 @@
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   when: argocd_values.changed or ('argo-cd-' ~ argocd_chart_version) not in argocd_release.stdout
   changed_when: true
+
+# Värdena skickas på stdin, så ingen fil med token blir kvar på noden.
+- name: Ger Argo CD inloggning till repot
+  ansible.builtin.command:
+    cmd: kubectl apply -f -
+    stdin: "{{ lookup('ansible.builtin.template', 'repo-secret.yaml.j2') }}"
+  register: argocd_repo_secret
+  changed_when: "'unchanged' not in argocd_repo_secret.stdout"
+  no_log: true

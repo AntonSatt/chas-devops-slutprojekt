@@ -1,3 +1,10 @@
 # Pinnade versioner, så att ett nybygge blir likadant som det förra.
 argocd_helm_version: "v4.2.4"
 argocd_chart_version: "10.9.2"
+
+# Repot är internal, så Argo CD måste logga in för att läsa det. En
+# deploy-token med bara read_repository, från CI-variablerna med samma namn.
+# Samma adress står i kubernetes/apps/values.yaml.
+argocd_repo_url: https://git.chas-lab.dev/devops-grupp-1/grupprojekt.git
+argocd_repo_user: "{{ lookup('ansible.builtin.env', 'ARGOCD_REPO_USER') }}"
+argocd_repo_token: "{{ lookup('ansible.builtin.env', 'ARGOCD_REPO_TOKEN') }}"
