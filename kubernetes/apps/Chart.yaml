@@ -1,0 +1,7 @@
+# App of apps: varje fil i templates/ är en Argo CD Application, alltså en
+# app i klustret. Charten installeras aldrig med helm install. Argo CD
+# renderar den via root-appen, som rollen argocd skapar.
+apiVersion: v2
+name: apps
+description: Gruppens appar i Argo CD
+version: 0.1.0
