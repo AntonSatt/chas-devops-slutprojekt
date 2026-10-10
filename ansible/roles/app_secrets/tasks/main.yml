@@ -6,9 +6,10 @@
   ansible.builtin.assert:
     that:
       - app_secrets_grafana_admin_password | length > 0
+      - app_secrets_mattermost_webhook_url | length > 0
     fail_msg: >-
-      GRAFANA_ADMIN_PASSWORD saknas i miljön. I dev, skapa ett en gång:
-      echo "export GRAFANA_ADMIN_PASSWORD=$(openssl rand -hex 16)" >> .envrc
+      GRAFANA_ADMIN_PASSWORD eller MATTERMOST_WEBHOOK_URL saknas i miljön.
+      Värdena finns i CI-variablerna med samma namn, se README.
     quiet: true
 
 - name: Skapar apparnas secrets
