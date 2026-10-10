@@ -1,0 +1,17 @@
+# Volym för Synapse: mediefiler och signeringsnyckeln. En Deployment kan inte
+# ha volumeClaimTemplates som en StatefulSet, så PVC:n är ett eget objekt.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "synapse.fullname" . }}-data
+  labels:
+    {{- include "synapse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: synapse
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- with .Values.synapse.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.synapse.persistence.size }}

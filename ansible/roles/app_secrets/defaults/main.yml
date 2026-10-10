@@ -2,3 +2,5 @@
 # din .envrc. Inget av det står i git.
 app_secrets_grafana_admin_password: "{{ lookup('ansible.builtin.env', 'GRAFANA_ADMIN_PASSWORD') }}"
 app_secrets_mattermost_webhook_url: "{{ lookup('ansible.builtin.env', 'MATTERMOST_WEBHOOK_URL') }}"
+app_secrets_synapse_postgres_password: "{{ lookup('ansible.builtin.env', 'SYNAPSE_POSTGRES_PASSWORD') }}"
+app_secrets_synapse_registration_shared_secret: "{{ lookup('ansible.builtin.env', 'SYNAPSE_REGISTRATION_SHARED_SECRET') }}"

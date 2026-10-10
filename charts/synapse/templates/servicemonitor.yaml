@@ -1,0 +1,23 @@
+{{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled }}
+# Säger åt Prometheus att skrapa Synapse. Prometheus-operatorn i
+# kube-prometheus-stack hittar ServiceMonitors i alla namespaces och gör om
+# dem till Prometheus-konfiguration.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "synapse.fullname" . }}
+  labels:
+    {{- include "synapse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: synapse
+spec:
+  # Väljer Synapse-servicen på samma labels som servicen väljer poddar med.
+  # component gör att Element-servicen inte kommer med.
+  selector:
+    matchLabels:
+      {{- include "synapse.selectorLabels" (dict "ctx" . "component" "synapse") | nindent 6 }}
+  endpoints:
+    # Portens namn i servicen, inte numret.
+    - port: metrics
+      path: /_synapse/metrics
+      interval: 30s
+{{- end }}

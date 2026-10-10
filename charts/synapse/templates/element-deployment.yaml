@@ -1,0 +1,70 @@
+{{- if .Values.element.enabled }}
+# Element web, webbklienten. Bara statiska filer som nginx serverar, all
+# logik körs i webbläsaren som sedan pratar direkt med Synapse.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "synapse.fullname" . }}-element
+  labels:
+    {{- include "synapse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: element
+spec:
+  # Inget sparas i podden, så den kan ha flera repliker och uppgraderas
+  # med RollingUpdate utan avbrott.
+  replicas: {{ .Values.element.replicas }}
+  selector:
+    matchLabels:
+      {{- include "synapse.selectorLabels" (dict "ctx" . "component" "element") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "synapse.labels" . | nindent 8 }}
+        app.kubernetes.io/component: element
+      annotations:
+        # Startar om podden när config.json ändras. Filen monteras med
+        # subPath, och sådana filer uppdateras inte i en podd som redan kör.
+        checksum/config: {{ include (print $.Template.BasePath "/element-configmap.yaml") . | sha256sum }}
+    spec:
+      # Imagen anger användaren som namnet nginx. Kubernetes kan inte
+      # kontrollera runAsNonRoot mot ett namn, bara mot ett nummer, och
+      # vägrar då starta podden. 101 är nginx-användarens uid i imagen.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+      containers:
+        - name: element
+          image: "{{ .Values.element.image.repository }}:{{ .Values.element.image.tag }}"
+          env:
+            # Imagen kör nginx som användaren nginx, inte root, och en sådan
+            # får inte lyssna på portar under 1024. Standardporten 80 fungerar
+            # därför inte i Kubernetes.
+            - name: ELEMENT_WEB_PORT
+              value: "8080"
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /config.json
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /config.json
+              port: http
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.element.resources | nindent 12 }}
+          volumeMounts:
+            # subPath: lägg bara config.json i /app, resten av katalogen
+            # (Elements filer) ska vara kvar.
+            - name: config
+              mountPath: /app/config.json
+              subPath: config.json
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "synapse.fullname" . }}-element
+{{- end }}

@@ -1,0 +1,17 @@
+{{- if and .Values.metrics.enabled .Values.metrics.dashboard.enabled }}
+# Grafana-dashboard för Synapse. Sidecaren i Grafana letar efter ConfigMaps
+# med labeln grafana_dashboard: "1" i alla namespaces och laddar in JSON:en.
+# Själva dashboarden ligger i files/dashboard.json, så den går att exportera
+# från Grafana och klistra in igen.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "synapse.fullname" . }}-dashboard
+  labels:
+    {{- include "synapse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: synapse
+    grafana_dashboard: "1"
+data:
+  synapse.json: |-
+    {{- .Files.Get "files/dashboard.json" | nindent 4 }}
+{{- end }}

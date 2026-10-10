@@ -1,0 +1,36 @@
+# Matrix Synapse med Element web, vår egen chart i charts/synapse.
+# Klustrets värden (hostnamn) ligger i kubernetes/values/synapse.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: synapse
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.repoURL }}
+    targetRevision: {{ .Values.revision }}
+    path: charts/synapse
+    helm:
+      # Sökvägen är relativ till charten. Argo CD tillåter det så länge
+      # filen ligger i samma repo.
+      valueFiles:
+        - ../../kubernetes/values/synapse.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: synapse
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # ServiceMonitor kommer från monitoring. Finns den inte än vid första
+      # synken försöker appen igen i stället för att fastna.
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m

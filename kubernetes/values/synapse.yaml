@@ -1,0 +1,10 @@
+# Values till vår Synapse-chart i charts/synapse. Bara det som skiljer
+# klustret från chartens standardvärden.
+
+# Samma namn som API-hosten, så behövs ingen .well-known-delegering.
+serverName: matrix.group-1.doe25.chas-lab.dev
+
+ingress:
+  # Wildcard-posten *.group-1.doe25.chas-lab.dev pekar redan på klustret.
+  synapseHost: matrix.group-1.doe25.chas-lab.dev
+  elementHost: element.group-1.doe25.chas-lab.dev
