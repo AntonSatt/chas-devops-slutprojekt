@@ -1,0 +1,111 @@
+# Själva Synapse, Matrix-servern. Element och andra klienter pratar med den.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "synapse.fullname" . }}
+  labels:
+    {{- include "synapse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: synapse
+spec:
+  # Alltid en. Synapse utan workers är en enda process, och två processer mot
+  # samma databas och samma mediekatalog krockar.
+  replicas: 1
+  # Recreate: den gamla podden stoppas innan den nya startar. Med
+  # RollingUpdate skulle den nya vänta på volymen som den gamla fortfarande
+  # håller (ReadWriteOnce).
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "synapse.selectorLabels" (dict "ctx" . "component" "synapse") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "synapse.labels" . | nindent 8 }}
+        app.kubernetes.io/component: synapse
+      annotations:
+        # Synapse läser bara konfigurationen när den startar. Checksumman
+        # ändras när ConfigMapen ändras, podden blir då en annan och startas
+        # om.
+        checksum/config: {{ include (print $.Template.BasePath "/synapse-configmap.yaml") . | sha256sum }}
+    spec:
+      # Imagen startar som root och byter själv till användare 991. Här körs
+      # den som 991 direkt. fsGroup gör att volymen blir skrivbar för den
+      # användaren.
+      securityContext:
+        runAsUser: 991
+        runAsGroup: 991
+        runAsNonRoot: true
+        fsGroup: 991
+      # Synapse kraschar om databasen inte svarar när den startar. Vänta på
+      # Postgres först, så slipper vi en CrashLoopBackOff vid varje nybygge.
+      initContainers:
+        - name: wait-for-postgres
+          image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
+          command:
+            - sh
+            - -c
+            - until pg_isready -h {{ include "synapse.postgresHost" . }} -U synapse; do sleep 2; done
+      containers:
+        - name: synapse
+          image: "{{ .Values.synapse.image.repository }}:{{ .Values.synapse.image.tag }}"
+          # run är imagens startläge. Konfigurationen läses från ConfigMapen.
+          args: ["run", "--config-path", "/config/homeserver.yaml"]
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecret }}
+                  key: postgres-password
+          ports:
+            - name: http
+              containerPort: 8008
+            {{- if .Values.metrics.enabled }}
+            - name: metrics
+              containerPort: 9000
+            {{- end }}
+          # Första starten skapar alla tabeller i databasen och kan ta en
+          # stund. startupProbe ger den 150 sekunder innan liveness tar över.
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.synapse.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: secrets
+              mountPath: /secrets
+              readOnly: true
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "synapse.fullname" . }}
+        # Bara registreringshemligheten blir en fil. Lösenordet går som
+        # miljövariabel ovan.
+        - name: secrets
+          secret:
+            secretName: {{ .Values.existingSecret }}
+            items:
+              - key: registration-shared-secret
+                path: registration-shared-secret
+            defaultMode: 0440
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "synapse.fullname" . }}-data
