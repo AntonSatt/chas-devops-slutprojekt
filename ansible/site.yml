@@ -43,3 +43,8 @@
   hosts: "cluster_{{ cluster }}:&workers"
   roles:
     - k3s_agent
+
+- name: Installerar Argo CD, som sen synkar resten från git
+  hosts: "cluster_{{ cluster }}:&cp_first"
+  roles:
+    - argocd
