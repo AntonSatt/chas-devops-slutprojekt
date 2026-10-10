@@ -1,0 +1,17 @@
+{{- if .Values.element.enabled }}
+# Service för Element web. Ingressen skickar webbklientens host hit.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "synapse.fullname" . }}-element
+  labels:
+    {{- include "synapse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: element
+spec:
+  selector:
+    {{- include "synapse.selectorLabels" (dict "ctx" . "component" "element") | nindent 4 }}
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+{{- end }}
