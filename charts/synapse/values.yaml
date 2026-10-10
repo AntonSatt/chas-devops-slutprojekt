@@ -1,0 +1,86 @@
+# Standardvärden för charten. Klustrets egna värden (hostnamn, Secret) ligger
+# i kubernetes/values/synapse.yaml och skriver över dessa.
+
+# Matrix-namnet på servern. Det blir en del av varje användar-id,
+# t.ex. @anton:matrix.example.com, och går inte att byta efteråt utan att
+# börja om med en tom databas.
+serverName: matrix.example.com
+
+# Secreten med lösenordet till Postgres och hemligheten för att skapa
+# användare. Charten skapar den inte själv: då skulle lösenordet stå i values
+# och hamna i git. Den skapas utanför charten och måste ha nycklarna
+# postgres-password och registration-shared-secret.
+existingSecret: synapse-secrets
+
+synapse:
+  image:
+    repository: matrixdotorg/synapse
+    tag: v1.162.0
+  # Ingen replicas här: Synapse utan workers är en enda process, och
+  # mediefilerna ligger på en volym som bara en nod i taget kan montera.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    # Bara minnesgräns. En CPU-gräns stryper processen även när noden har
+    # CPU över, minnesgränsen skyddar resten av noden om Synapse läcker.
+    limits:
+      memory: 1Gi
+  persistence:
+    # Mediefiler (bilder och filer användarna laddar upp) och signeringsnyckeln.
+    size: 5Gi
+    # Tomt = klustrets standard. I k3s är det local-path.
+    storageClass: ""
+
+element:
+  enabled: true
+  # Element web är bara statiska filer i nginx, så fler repliker går bra.
+  replicas: 2
+  image:
+    repository: vectorim/element-web
+    tag: v1.12.30
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+postgres:
+  image:
+    repository: postgres
+    tag: 17.11-alpine
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+  persistence:
+    size: 5Gi
+    storageClass: ""
+
+ingress:
+  enabled: true
+  className: traefik
+  # Två hostar: API:t som Element och andra klienter pratar med, och själva
+  # webbklienten.
+  synapseHost: matrix.example.com
+  elementHost: element.example.com
+  tls:
+    enabled: true
+    # Tomt = ingen secretName i Ingressen, och Traefik använder sitt
+    # standardcertifikat (gruppens wildcard). Sätt ett namn om certifikatet
+    # ligger i en egen Secret i samma namespace.
+    secretName: ""
+  annotations: {}
+
+metrics:
+  # Synapse har egna metrics på /_synapse/metrics, på en egen port.
+  enabled: true
+  # Kräver kube-prometheus-stack i klustret (CRD:n ServiceMonitor).
+  serviceMonitor:
+    enabled: true
+  # ConfigMap med en dashboard som Grafanas sidecar laddar in.
+  dashboard:
+    enabled: true
