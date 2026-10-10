@@ -1,0 +1,21 @@
+# Service för Synapse. Ingressen skickar API-trafiken hit, och Prometheus
+# hittar metrics-porten via ServiceMonitorn.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "synapse.fullname" . }}
+  labels:
+    {{- include "synapse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: synapse
+spec:
+  selector:
+    {{- include "synapse.selectorLabels" (dict "ctx" . "component" "synapse") | nindent 4 }}
+  ports:
+    - name: http
+      port: 8008
+      targetPort: http
+    {{- if .Values.metrics.enabled }}
+    - name: metrics
+      port: 9000
+      targetPort: metrics
+    {{- end }}
