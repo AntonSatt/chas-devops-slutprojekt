@@ -14,6 +14,18 @@ kubeProxy:
 kubeEtcd:
   enabled: false
 
+# Operatorns admission-webhook kontrollerar larmregler innan de sparas. Den
+# får sitt certifikat av Helm-hooks som skriver in det i klustret. Argo CD
+# ser det som en avvikelse från git och synkar om, hooksen körs igen, och så
+# vidare: en loop som tog en hel CPU-kärna. Utan webhooken syns en trasig
+# regel i stället i operatorns logg. tls hör till webhooken och stängs av med
+# den.
+prometheusOperator:
+  admissionWebhooks:
+    enabled: false
+  tls:
+    enabled: false
+
 prometheus:
   prometheusSpec:
     # false = ta ServiceMonitors, PodMonitors och larmregler från hela
