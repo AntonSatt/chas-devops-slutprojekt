@@ -1,0 +1,4 @@
+# Delas av alla appar i templates/. Ansible skickar in revision när
+# root-appen skapas: main i prod, din egen gren i ett dev-kluster.
+repoURL: https://git.chas-lab.dev/devops-grupp-1/grupprojekt.git
+revision: main
