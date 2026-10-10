@@ -1,0 +1,23 @@
+Synapse är installerat i namespace {{ .Release.Namespace }}.
+{{- if .Values.ingress.enabled }}
+
+  API:t:       https://{{ .Values.ingress.synapseHost }}
+{{- if .Values.element.enabled }}
+  Element web: https://{{ .Values.ingress.elementHost }}
+{{- end }}
+{{- end }}
+
+Kolla att allt kör:
+
+  kubectl -n {{ .Release.Namespace }} get pods
+
+Hänger poddarna i CreateContainerConfigError saknas Secreten {{ .Values.existingSecret }}.
+Den ska ha nycklarna postgres-password och registration-shared-secret.
+
+Öppen registrering är avstängd. Skapa en användare (-a gör den till admin):
+
+  MATRIX_USER=anton
+  kubectl -n {{ .Release.Namespace }} exec -it deploy/{{ include "synapse.fullname" . }} -c synapse -- \
+    register_new_matrix_user -c /config/homeserver.yaml -u "$MATRIX_USER" -a http://localhost:8008
+
+Användaren blir @$MATRIX_USER:{{ .Values.serverName }}.
