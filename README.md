@@ -276,6 +276,30 @@ kubectl -n argocd port-forward svc/argocd-server 8080:80
 
 Öppna http://localhost:8080 och logga in som `admin`.
 
+## Monitoring
+
+Appen `monitoring` är kube-prometheus-stack: Prometheus, Grafana,
+Alertmanager, node-exporter och kube-state-metrics. Den plockar upp
+ServiceMonitors, dashboards och larmregler från alla namespaces. Hur det
+hänger ihop, och övningar: [docs/monitoring/monitoring.md](docs/monitoring/monitoring.md).
+
+Grafanas admin-lösenord kommer från CI-variabeln `GRAFANA_ADMIN_PASSWORD`.
+I dev skapar du ett eget, en gång:
+
+```bash
+echo "export GRAFANA_ADMIN_PASSWORD=$(openssl rand -hex 16)" >> .envrc
+```
+
+Prometheus och Grafana, med `KUBECONFIG` satt som ovan:
+
+```bash
+kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090
+kubectl -n monitoring port-forward svc/monitoring-grafana 3000:80
+```
+
+Prometheus på http://localhost:9090, Grafana på http://localhost:3000 som
+`admin`.
+
 ## Spelregler
 
 Från `group-project.pdf`, avsnitt 6. Kontrolleras automatiskt och löpande.
