@@ -1,0 +1,59 @@
+{{- if .Values.ingress.enabled }}
+# En Ingress med två hostar: API:t (Synapse) och webbklienten (Element).
+# Traefik i k3s läser den och skickar trafiken till rätt service.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "synapse.fullname" . }}
+  labels:
+    {{- include "synapse.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.synapseHost }}
+        {{- if .Values.element.enabled }}
+        - {{ .Values.ingress.elementHost }}
+        {{- end }}
+      {{- with .Values.ingress.tls.secretName }}
+      secretName: {{ . }}
+      {{- end }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.synapseHost }}
+      http:
+        # Bara det klienterna behöver. Admin-API:t under /_synapse/admin
+        # når man inte utifrån, bara inifrån klustret.
+        paths:
+          - path: /_matrix
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "synapse.fullname" . }}
+                port:
+                  name: http
+          - path: /_synapse/client
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "synapse.fullname" . }}
+                port:
+                  name: http
+    {{- if .Values.element.enabled }}
+    - host: {{ .Values.ingress.elementHost }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "synapse.fullname" . }}-element
+                port:
+                  name: http
+    {{- end }}
+{{- end }}
