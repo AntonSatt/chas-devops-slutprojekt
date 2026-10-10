@@ -25,8 +25,13 @@ spec:
         # subPath, och sådana filer uppdateras inte i en podd som redan kör.
         checksum/config: {{ include (print $.Template.BasePath "/element-configmap.yaml") . | sha256sum }}
     spec:
+      # Imagen anger användaren som namnet nginx. Kubernetes kan inte
+      # kontrollera runAsNonRoot mot ett namn, bara mot ett nummer, och
+      # vägrar då starta podden. 101 är nginx-användarens uid i imagen.
       securityContext:
         runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
       containers:
         - name: element
           image: "{{ .Values.element.image.repository }}:{{ .Values.element.image.tag }}"
