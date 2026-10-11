@@ -56,22 +56,23 @@ Står inget annat börjar kodblocken i repots rot.
 
 | Verktyg | Används i |
 |---|---|
-| `terraform` eller `tofu` | steg 3 och 8 |
-| `ansible`, ansible-core räcker | steg 4 |
+| `terraform` eller `tofu` | steg 3 och 8. Med tofu byter du `terraform` mot `tofu` i kommandona |
+| `ansible-core` 2.18 eller nyare | steg 4. Collectionerna kräver det, och apt i Ubuntu 24.04 har en för gammal |
 | `kubectl` | steg 5 till 7 |
-| `direnv` | laddar `.envrc`, valfritt |
+| `direnv` | laddar `.envrc`, valfritt. Kräver hooken i ditt skal, se direnv.net |
 | `git`, `openssl`, `curl`, `jq` | små saker längs vägen |
 
-Inventoryn i Ansible (collectionen `hetzner.hcloud`) behöver Python-paketen
-`requests` och `python-dateutil` i samma Python som Ansible. Installerade du
-Ansible med pipx:
+Installera Ansible med pipx. Inventoryn (collectionen `hetzner.hcloud`)
+behöver också Python-paketen `requests` och `python-dateutil`, i samma
+Python som Ansible:
 
 ```bash
+pipx install ansible-core
 pipx inject ansible-core requests python-dateutil
 ```
 
-Står paketet som `ansible` i `pipx list`, byt `ansible-core` mot `ansible`.
-Annars: `pip install requests python-dateutil` i samma miljö som Ansible.
+Har du redan Ansible via pipx som paketet `ansible`, byt `ansible-core` mot
+`ansible` på andra raden.
 
 Kontrollera:
 
@@ -81,11 +82,22 @@ ansible --version
 kubectl version --client
 ```
 
-Klona repot om du inte redan har det:
+`ansible --version` ska visa core 2.18 eller nyare.
+
+Klona repot om du inte redan har det, på samma sätt som du brukar pusha
+(SSH, eller HTTPS med en token som får skriva). Steg 7 pushar en gren.
 
 ```bash
-git clone https://git.chas-lab.dev/devops-grupp-1/grupprojekt.git
+git clone git@git.chas-lab.dev:devops-grupp-1/grupprojekt.git
 cd grupprojekt
+```
+
+Har du redan repot, hämta senaste `main`. Terraform och Ansible kör din
+lokala kod, Argo CD läser från GitLab, så de ska vara samma:
+
+```bash
+git switch main
+git pull
 ```
 
 ## Steg 1: hemligheterna
