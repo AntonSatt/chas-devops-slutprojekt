@@ -3,9 +3,10 @@
     that:
       - k3s_token | length > 0
     fail_msg: >-
-      K3S_TOKEN saknas i miljön. Skapa en egen token för ditt kluster, en gång:
-      echo "export K3S_TOKEN=$(openssl rand -hex 32)" >> .envrc
-      och kör sedan direnv allow (utan direnv: source .envrc i varje ny terminal).
+      K3S_TOKEN saknas i miljön. Skapa en egen token för ditt kluster, en gång,
+      i .envrc i repots rot (inte i ansible/):
+      echo "export K3S_TOKEN=$(openssl rand -hex 32)" >> ../.envrc
+      och kör sedan direnv allow (utan direnv: source ../.envrc i varje ny terminal).
       Byt aldrig token på ett kluster som redan finns.
     quiet: true
 
