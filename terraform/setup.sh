@@ -1,4 +1,4 @@
-
+#!/usr/bin/env bash
 TF_STATE_NAME=$1
 STATE_URL="https://git.chas-lab.dev/api/v4/projects/582/terraform/state"
 
