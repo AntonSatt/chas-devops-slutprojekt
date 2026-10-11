@@ -197,3 +197,140 @@ done
 
 Gå in i `ansible/` och kör loopen igen. Svaret ska bli detsamma. Som
 Developer blir de två `GITLAB_`-raderna `SAKNAS`, det är väntat.
+
+## Steg 3: Terraform, servrarna
+
+Terraform skapar VM:arna och en brandvägg för control planes. Allt får ditt
+namn först och labeln `cluster` med ditt namn som värde. Labeln är det
+Ansible hittar servrarna med i steg 4. Varför det är byggt så:
+[miljo-per-person.md](miljoer/miljo-per-person.md).
+
+| Fil | Vad den gör |
+|---|---|
+| `terraform/main.tf` | servrarna, worker-VM:en för dev och brandväggen |
+| `terraform/variables.tf` | variablerna som `TF_VAR_` i din `.envrc` sätter |
+| `terraform/setup.sh` | pekar Terraform mot din state i GitLab |
+
+**Maintainer**, state i GitLab:
+
+```bash
+cd terraform
+./setup.sh "$TF_VAR_cluster_name-state"
+terraform plan
+```
+
+Vilken state du står på, om du är osäker:
+
+```bash
+grep -o 'terraform/state/[^"/]*' .terraform/terraform.tfstate | head -1
+```
+
+**Developer**, lokal state. Filen `backend_override.tf` byter ut
+`backend "http"` i `main.tf` och är gitignorerad:
+
+```bash
+cd terraform
+printf 'terraform {\n  backend "local" {}\n}\n' > backend_override.tf
+terraform init -reconfigure
+terraform plan
+```
+
+Staten hamnar i `terraform/terraform.tfstate` på din dator. Ta inte bort
+den medan servrarna finns, utan den kan Terraform inte riva dem.
+
+**Läs planen innan du går vidare.** Med en control plane och en worker ska
+den sluta med `Plan: 3 to add, 0 to change, 0 to destroy`, och alla tre har
+ditt namn: `...-node-cp-0`, `...-node-worker-0` och brandväggen
+`...-k3s-control-plane`. Visar den `-` eller `~` på något som inte heter
+ditt namn står du på fel state: kör inte `apply`.
+
+```bash
+terraform apply
+cd ..
+```
+
+`apply` visar planen igen och frågar. Svara `yes`. Efter någon minut
+skriver den ut `cp_ips`, control planens adress.
+
+## Steg 4: Ansible, k3s, secrets och Argo CD
+
+`site.yml` gör resten av bootstrap. Det är fem plays som körs i ordning:
+
+| Play | Körs på | Gör | Koden |
+|---|---|---|---|
+| 1 | alla noder | användaren `group1` med gruppnyckeln och sudo, som spelreglerna kräver | `ansible/site.yml` |
+| 2 | första control planen | k3s med inbyggd etcd (`--cluster-init`) och WireGuard mellan noderna, hämtar kubeconfig | `ansible/roles/k3s_server/` |
+| 3 | övriga control planes, en i taget | ansluter till den första. Inga i dev med en control plane | `ansible/roles/k3s_server/` |
+| 4 | workers | ufw först, sedan k3s som agent | `ansible/roles/k3s_agent/` |
+| 5 | första control planen | Kubernetes-Secrets av din `.envrc`, Argo CD och root-appen | `ansible/roles/app_secrets/`, `ansible/roles/argocd/` |
+
+Efter play 5 tar Argo CD över, och allt annat kommer från git. Ansible
+körs alltid från `ansible/`, annars läses inte `ansible.cfg`.
+
+```bash
+cd ansible
+ansible-galaxy collection install -r requirements.yml -p collections --force
+ansible-playbook site.yml -e cluster="$TF_VAR_cluster_name" --list-hosts
+```
+
+`--list-hosts` kör ingenting, den visar bara vilka servrar varje play
+träffar. Det ska bara vara dina, `...-node-cp-0` och `...-node-worker-0`.
+Står `worker` (bare metal-workern i prod) eller någon annans namn där:
+stanna.
+
+Sedan på riktigt. `k3s_taint_control_planes=true` sätter `NoSchedule` på
+control planen som i prod, så att apparna bara hamnar på workern:
+
+```bash
+cd ansible
+ansible-playbook site.yml -e cluster="$TF_VAR_cluster_name" -e k3s_taint_control_planes=true
+cd ..
+```
+
+Det tar runt fem minuter. `PLAY RECAP` sist ska visa `failed=0` för alla
+servrar. Playbooken skriver kubeconfig till `$TF_VAR_cluster_name.kubeconfig`
+i repots rot, gitignorerad.
+
+Kör samma kommando en gång till. Nu ska control planen ge `changed=0`,
+eftersom rollerna bara gör något när det behövs. Varför installeras inte
+Argo CD om?
+
+| Felet | Orsak |
+|---|---|
+| `'cluster' is undefined` | `-e cluster=...` saknas. Skyddet är med flit, se README |
+| `... saknas i miljön` | en variabel saknas, kör kontrollen i steg 2 |
+| `hosts (0)` i `--list-hosts` | `.envrc` är inte laddad i `ansible/`, eller servrarna finns inte. Kör kontrollen i steg 2 från `ansible/` |
+| fel om `requests` eller `dateutil` | Python-paketen i steg 0 |
+| `Permission denied (publickey)` | nyckeln, se steg 1 |
+| timeout i första tasken | servrarna har precis startat, kör igen |
+
+## Steg 5: kolla klustret
+
+```bash
+export KUBECONFIG=$PWD/$TF_VAR_cluster_name.kubeconfig
+kubectl get nodes
+kubectl get nodes -o custom-columns=NOD:.metadata.name,TAINT:.spec.taints[*].effect
+```
+
+Båda noderna ska vara `Ready`. Control planen har `NoSchedule`, workern
+`<none>`.
+
+```bash
+kubectl get pods -A -o wide
+```
+
+Titta i kolumnen `NODE`: apparna ligger på workern. På control planen finns
+bara det som tål taint, som k3s egna poddar och node-exporter.
+
+```bash
+kubectl -n argocd get applications
+```
+
+Efter några minuter ska alla vara `Synced` och `Healthy`: `root`,
+`monitoring`, `larmtest` och `synapse`. Första gången tar det längre, när
+alla images laddas ner, och `Progressing` en stund är normalt. Står en app
+kvar i `OutOfSync` eller `Degraded`, öppna den i Argo CD:s UI (steg 6) och
+läs felet.
+
+Lägg gärna `KUBECONFIG`-raden sist i `.envrc`, så slipper du skriva den i
+varje terminal.
