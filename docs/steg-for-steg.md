@@ -50,7 +50,7 @@ flowchart LR
 | 7 | git | ändra klustret med en commit | samma, via MR till `main` |
 | 8 | Terraform | riv | prod rivs bara vid genrepet |
 
-Varje kodblock börjar i repots rot.
+Står inget annat börjar kodblocken i repots rot.
 
 ## Steg 0: verktyg
 
@@ -219,7 +219,7 @@ cd terraform
 terraform plan
 ```
 
-Vilken state du står på, om du är osäker:
+Vilken state du står på, om du är osäker. Från `terraform/`:
 
 ```bash
 grep -o 'terraform/state/[^"/]*' .terraform/terraform.tfstate | head -1
@@ -243,6 +243,8 @@ den sluta med `Plan: 3 to add, 0 to change, 0 to destroy`, och alla tre har
 ditt namn: `...-node-cp-0`, `...-node-worker-0` och brandväggen
 `...-k3s-control-plane`. Visar den `-` eller `~` på något som inte heter
 ditt namn står du på fel state: kör inte `apply`.
+
+Fortfarande i `terraform/`:
 
 ```bash
 terraform apply
@@ -271,6 +273,7 @@ körs alltid från `ansible/`, annars läses inte `ansible.cfg`.
 cd ansible
 ansible-galaxy collection install -r requirements.yml -p collections --force
 ansible-playbook site.yml -e cluster="$TF_VAR_cluster_name" --list-hosts
+cd ..
 ```
 
 `--list-hosts` kör ingenting, den visar bara vilka servrar varje play
