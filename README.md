@@ -5,6 +5,10 @@ worker, byggt från GitLab CI med Terraform och Ansible.
 
 Deadline 2026-10-25, Final Lab 2026-10-26. Alla ska kunna förklara alla delar.
 
+Ny i projektet, eller vill du förstå hur allt hänger ihop? Bygg ett eget
+kluster från noll med [steg-för-steg-guiden](docs/steg-for-steg.md). Den
+visar också vilka delar som är klara.
+
 ## Arbetssätt
 
 - `main` är skyddad, allt går via merge request.
