@@ -155,7 +155,7 @@ export MATTERMOST_WEBHOOK_URL=...
 
 | Variabel | Värde |
 |---|---|
-| `GITLAB_USER_NAME` | ditt användarnamn i GitLab. Developer hoppar över den och `GITLAB_ACCESS_TOKEN` |
+| `GITLAB_USER_NAME` | ditt användarnamn i GitLab. Developer tar bort den raden och `GITLAB_ACCESS_TOKEN` |
 | `TF_VAR_cluster_name` | ditt förnamn, bara a-z, 0-9 och bindestreck (inga å, ä, ö). Prefix på allt du skapar. Aldrig `group1`, det är prod |
 | `TF_VAR_admin_cidr` | din publika IPv4 plus `/32`. `curl -4 -s https://ifconfig.me` visar den. Utan `-4` kan du få IPv6, som inte fungerar här. Den enda adress som når port 6443 på ditt kluster |
 | `TF_VAR_control_plane_count` | `1` räcker i dev och är billigare. Prod har 3 |
@@ -165,22 +165,26 @@ Byter du nätverk, till exempel mellan skolan och hemma, ändra `admin_cidr`
 och kör `terraform apply` igen. Annars når du inte ditt kluster med
 `kubectl`.
 
-Sedan värdena du skapar själv. Kör raderna **en gång**, från repots rot:
+Sedan värdena du skapar själv, från repots rot. Varje rad lägger bara till
+ett värde som inte redan finns, så blocket går att köra igen:
 
 ```bash
-echo "export K3S_TOKEN=$(openssl rand -hex 32)" >> .envrc
-echo "export GRAFANA_ADMIN_PASSWORD=$(openssl rand -hex 16)" >> .envrc
-echo "export SYNAPSE_POSTGRES_PASSWORD=$(openssl rand -hex 16)" >> .envrc
-echo "export SYNAPSE_REGISTRATION_SHARED_SECRET=$(openssl rand -hex 32)" >> .envrc
+grep -q '^export K3S_TOKEN=' .envrc || echo "export K3S_TOKEN=$(openssl rand -hex 32)" >> .envrc
+grep -q '^export GRAFANA_ADMIN_PASSWORD=' .envrc || echo "export GRAFANA_ADMIN_PASSWORD=$(openssl rand -hex 16)" >> .envrc
+grep -q '^export SYNAPSE_POSTGRES_PASSWORD=' .envrc || echo "export SYNAPSE_POSTGRES_PASSWORD=$(openssl rand -hex 16)" >> .envrc
+grep -q '^export SYNAPSE_REGISTRATION_SHARED_SECRET=' .envrc || echo "export SYNAPSE_REGISTRATION_SHARED_SECRET=$(openssl rand -hex 32)" >> .envrc
 chmod 600 .envrc
 direnv allow
 ```
 
-Kör du raderna igen hamnar nya värden sist i filen, och de vinner. En ny
-`K3S_TOKEN` på ett kluster som redan finns gör att noderna inte kan
-ansluta. Ditt kluster har sina egna värden, prods ligger i CI-variablerna.
+Byt aldrig de här värdena på ett kluster som redan finns. En ny `K3S_TOKEN`
+gör att noderna inte kan ansluta, och ett nytt Postgres-lösenord gör att
+Synapse inte kommer in i sin databas, eftersom lösenordet bara sätts när
+databasen skapas. Behöver du nya värden, riv klustret först. Ditt kluster
+har sina egna värden, prods ligger i CI-variablerna.
 
-Utan direnv: kör `source .envrc` från repots rot i varje ny terminal.
+Utan direnv: hoppa över `direnv allow` och kör `source .envrc` från repots
+rot i varje ny terminal.
 Skriv aldrig `export` med ett hemligt värde direkt i terminalen, det hamnar
 i skalhistoriken.
 
@@ -191,12 +195,22 @@ for v in HCLOUD_TOKEN GITLAB_ACCESS_TOKEN GITLAB_USER_NAME \
   TF_VAR_cluster_name TF_VAR_admin_cidr K3S_TOKEN \
   ARGOCD_REPO_USER ARGOCD_REPO_TOKEN MATTERMOST_WEBHOOK_URL \
   GRAFANA_ADMIN_PASSWORD SYNAPSE_POSTGRES_PASSWORD SYNAPSE_REGISTRATION_SHARED_SECRET; do
-  if printenv "$v" > /dev/null; then echo "ok      $v"; else echo "SAKNAS  $v"; fi
+  val=$(printenv "$v")
+  if [ -n "$val" ] && [ "$val" != "..." ]; then echo "ok      $v"; else echo "SAKNAS  $v"; fi
 done
+unset val
 ```
 
-Gå in i `ansible/` och kör loopen igen. Svaret ska bli detsamma. Som
-Developer blir de två `GITLAB_`-raderna `SAKNAS`, det är väntat.
+`SAKNAS` betyder att variabeln inte är satt, är tom eller fortfarande har
+`...` från mallen. Som Developer blir de två `GITLAB_`-raderna `SAKNAS`, det
+är väntat.
+
+Gå in i `ansible/` och kör loopen igen. Svaret ska bli detsamma. Blir
+nästan allt `SAKNAS` där men inte i roten har du en gammal `ansible/.envrc`
+från när README sa fel. Flytta raderna till rotens `.envrc`, ta bort
+`ansible/.envrc` och kör `direnv allow` i roten. Finns `K3S_TOKEN` på båda
+ställena, behåll den som ditt kluster byggdes med, eller riv klustret och
+börja om.
 
 ## Steg 3: Terraform, servrarna
 
