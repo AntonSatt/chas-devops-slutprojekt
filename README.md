@@ -77,7 +77,9 @@ export TF_VAR_cluster_name=...
 export TF_VAR_admin_cidr=...
 ```
 
-Kör `direnv allow` efter varje ändring i filen.
+Kör `direnv allow` efter varje ändring i filen. Ha bara den här enda
+`.envrc`: direnv läser den närmaste filen, så en `.envrc` i `ansible/` eller
+`terraform/` gör att den i roten inte läses alls.
 
 ### Init
 
@@ -126,14 +128,15 @@ ansible-galaxy collection install -r requirements.yml -p collections --force
 ```
 
 `K3S_TOKEN` är join-token för ditt kluster. Alla control planes i ett kluster
-måste ha samma, så den skapas en gång och sparas i `.envrc`:
+måste ha samma, så den skapas en gång och sparas i `.envrc` i repots rot.
+Från `ansible/`:
 
 ```bash
-echo "export K3S_TOKEN=$(openssl rand -hex 32)" >> .envrc
+echo "export K3S_TOKEN=$(openssl rand -hex 32)" >> ../.envrc
 direnv allow
 ```
 
-Utan direnv: kör `source .envrc` i varje ny terminal. Skapa inte en ny token
+Utan direnv: kör `source ../.envrc` i varje ny terminal. Skapa inte en ny token
 med `export` direkt i terminalen, och byt aldrig token på ett kluster som
 redan finns, då kan resten av noderna inte ansluta. Din token gäller bara
 ditt kluster. Prod har en egen i CI-variabeln med samma namn. Saknas
@@ -285,7 +288,7 @@ ServiceMonitors, dashboards och larmregler från alla namespaces. Hur det
 hänger ihop, och övningar: [docs/monitoring/monitoring.md](docs/monitoring/monitoring.md).
 
 Grafanas admin-lösenord kommer från CI-variabeln `GRAFANA_ADMIN_PASSWORD`.
-I dev skapar du ett eget, en gång:
+I dev skapar du ett eget, en gång, från repots rot:
 
 ```bash
 echo "export GRAFANA_ADMIN_PASSWORD=$(openssl rand -hex 16)" >> .envrc
@@ -327,7 +330,8 @@ deployar den som appen `synapse`. Valen, övningar och hur man testar lokalt:
 [charts/synapse/README.md](charts/synapse/README.md).
 
 Secreten kommer från CI-variablerna `SYNAPSE_POSTGRES_PASSWORD` och
-`SYNAPSE_REGISTRATION_SHARED_SECRET`. I dev skapar du egna, en gång:
+`SYNAPSE_REGISTRATION_SHARED_SECRET`. I dev skapar du egna, en gång, från
+repots rot:
 
 ```bash
 echo "export SYNAPSE_POSTGRES_PASSWORD=$(openssl rand -hex 16)" >> .envrc
