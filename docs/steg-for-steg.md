@@ -156,8 +156,8 @@ export MATTERMOST_WEBHOOK_URL=...
 | Variabel | Värde |
 |---|---|
 | `GITLAB_USER_NAME` | ditt användarnamn i GitLab. Developer hoppar över den och `GITLAB_ACCESS_TOKEN` |
-| `TF_VAR_cluster_name` | ditt förnamn med små bokstäver. Prefix på allt du skapar. Aldrig `group1`, det är prod |
-| `TF_VAR_admin_cidr` | din publika IP plus `/32`. `curl -s https://ifconfig.me` visar den. Den enda adress som når port 6443 på ditt kluster |
+| `TF_VAR_cluster_name` | ditt förnamn, bara a-z, 0-9 och bindestreck (inga å, ä, ö). Prefix på allt du skapar. Aldrig `group1`, det är prod |
+| `TF_VAR_admin_cidr` | din publika IPv4 plus `/32`. `curl -4 -s https://ifconfig.me` visar den. Utan `-4` kan du få IPv6, som inte fungerar här. Den enda adress som når port 6443 på ditt kluster |
 | `TF_VAR_control_plane_count` | `1` räcker i dev och är billigare. Prod har 3 |
 | `TF_VAR_worker_count` | `1` ger en worker-VM, så att ditt kluster ser ut som prod |
 
@@ -316,7 +316,9 @@ kubectl get nodes -o custom-columns=NOD:.metadata.name,TAINT:.spec.taints[*].eff
 ```
 
 Båda noderna ska vara `Ready`. Control planen har `NoSchedule`, workern
-`<none>`.
+`<none>`. Hänger `kubectl` tills den får timeout stämmer inte `admin_cidr`
+med din IPv4. Rätta den i `.envrc` och kör `terraform apply` i `terraform/`
+igen.
 
 ```bash
 kubectl get pods -A -o wide
