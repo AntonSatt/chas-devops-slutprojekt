@@ -337,3 +337,144 @@ läs felet.
 
 Lägg gärna `KUBECONFIG`-raden sist i `.envrc`, så slipper du skriva den i
 varje terminal.
+
+## Steg 6: titta in i apparna
+
+Hostnamnen i `kubernetes/values/` pekar på prods worker via wildcard-posten,
+så i dev når du apparna med port-forward. Varje port-forward tar en
+terminal, avsluta med Ctrl-C. Med `KUBECONFIG` satt som i steg 5:
+
+| App | Kommando | Adress | Inloggning |
+|---|---|---|---|
+| Argo CD | `kubectl -n argocd port-forward svc/argocd-server 8080:80` | http://localhost:8080 | `admin`, lösenordet nedan |
+| Grafana | `kubectl -n monitoring port-forward svc/monitoring-grafana 3000:80` | http://localhost:3000 | `admin` och `GRAFANA_ADMIN_PASSWORD` |
+| Prometheus | `kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090` | http://localhost:9090 | ingen |
+| Alertmanager | `kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-alertmanager 9093:9093` | http://localhost:9093 | ingen |
+| Synapse | `kubectl -n synapse port-forward svc/synapse 8008:8008` | http://localhost:8008 | användare enligt `NOTES.txt` |
+
+Argo CD:s lösenord:
+
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo
+```
+
+Det här ska du se, och kunna koppla till uppgiften:
+
+- **Argo CD:** klicka på `root`. Alla appar hänger under den, det är app of
+  apps.
+- **Prometheus:** under *Status* finns sidan med targets. Allt ska vara up,
+  även node-exporter på control planen (port 9100 i brandväggen).
+- **Grafana:** under *Dashboards* finns både noderna (infrastruktur) och
+  poddarna (workloads). Uppgiften kräver båda.
+- **Synapse:** skapa en användare enligt
+  `charts/synapse/templates/NOTES.txt` och prova
+  `curl -s localhost:8008/_matrix/client/versions`.
+
+Fördjupning, med övningar och troliga frågor:
+[argo-cd.md](gitops/argo-cd.md), [monitoring.md](monitoring/monitoring.md),
+[larm.md](monitoring/larm.md) och
+[charts/synapse/README.md](../charts/synapse/README.md).
+
+## Steg 7: ändra klustret med en commit
+
+Så här görs ändringar på labben: efter bootstrap ändras klustret bara
+genom git. Argo CD läser från GitLab, inte från din dator, så ditt kluster
+måste följa en gren som är pushad.
+
+Skapa en övningsgren och låt klustret följa den. Playbooken ändrar bara
+root-appen, resten finns redan:
+
+```bash
+MIN_GREN=ovning/$TF_VAR_cluster_name
+git switch -c "$MIN_GREN" main
+git push -u origin "$MIN_GREN"
+cd ansible
+ansible-playbook site.yml -e cluster="$TF_VAR_cluster_name" -e argocd_revision="$MIN_GREN"
+cd ..
+```
+
+**Larmkedjan.** Ändra `replicas: 0` till `replicas: 1` i
+`kubernetes/manifests/larmtest/deployment.yaml`, sedan:
+
+```bash
+git commit -am "test(larm): larmtest på"
+git push
+```
+
+Följ vad som händer:
+
+```bash
+git rev-parse HEAD
+kubectl -n argocd get application root -o jsonpath='{.status.sync.revision}'; echo
+kubectl -n larmtest get pods -w
+```
+
+Argo CD kollar git var tredje minut. *Refresh* på appen i UI:t går
+fortare. När revisionerna är lika startar podden, och efter en minut löser
+`LarmtestAktiv` ut. I Mattermost kommer ett meddelande som börjar med
+`LARM` och ditt klusternamn. Sätt tillbaka `replicas: 0`, commit och push:
+larmet clearas och ett `OK` kommer. Ungefär två minuter åt varje håll.
+
+**selfHeal.** Ändra något för hand:
+
+```bash
+kubectl -n larmtest scale deployment larmtest --replicas 3
+kubectl -n larmtest get pods -w
+```
+
+Argo CD ser att klustret inte längre är likt git och skalar tillbaka. En
+ändring för hand överlever inte, därför går allt via commit.
+
+**Öva vidare** med låtsasförhöret i `charts/synapse/README.md`, till exempel
+tre Element-poddar. Samma sätt varje gång: ändra filen, commit, push, se
+Argo CD synka. Fundera på vad du förväntar dig innan du pushar.
+
+Grenen ska inte mergas. Städa när du är klar:
+
+```bash
+git switch main
+git push origin --delete "$MIN_GREN"
+git branch -D "$MIN_GREN"
+```
+
+## Steg 8: riv
+
+Servrarna kostar per timme, och spelreglerna säger att labb-VM:ar rivs när
+du är klar. Riv innan du slutar för dagen.
+
+```bash
+cd terraform
+terraform destroy
+cd ..
+rm "$TF_VAR_cluster_name.kubeconfig"
+```
+
+Läs planen innan du svarar `yes`: den ska bara ta bort saker med ditt namn.
+Står du på `grupprojekt-terraform-state` (prod) eller `dns`, svara nej.
+
+Kontrollera att inga servrar finns kvar hos Hetzner. Svaret ska vara `0`:
+
+```bash
+curl -s -H "Authorization: Bearer $HCLOUD_TOKEN" \
+  "https://api.hetzner.cloud/v1/servers?label_selector=cluster=$TF_VAR_cluster_name" | jq '.servers | length'
+```
+
+Nästa gång börjar du på steg 3. `.envrc` och nyckeln finns kvar.
+
+## Från dev till prod
+
+Prod är samma kod med `cluster_name = group1` och `-e cluster=group1`, plus
+det som bara finns där: tre control planes och bare metal-workern från
+`ansible/inventory/worker.ini`. Pipelinen ska göra steg 3 och 4 med
+CI-variablerna i stället för din `.envrc`, när en MR mergas till `main`.
+Steg 5 till 7 är desamma.
+
+Pipelinen finns inte än. Kör aldrig steg 3 eller 4 mot prod från din dator,
+se *Regler* i README. När pipelinen finns beskriver guiden vad dess jobb
+gör, och tabellen överst får en rad för den.
+
+## När en del blir klar
+
+Lägg till ett steg, eller en rad i steg 6, och uppdatera tabellen överst i
+samma MR. Certifikat och HTTPS, loggar, Sealed Secrets och pipelinen
+saknas per 2026-10-11.
