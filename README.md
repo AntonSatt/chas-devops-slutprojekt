@@ -51,6 +51,9 @@ bara via merge request.
 
 Ska du bara köra Ansible behöver du inget av detta, se *Ansible* nedan.
 
+Som Developer kan du inte skriva state i GitLab. Kör då lokal state, se
+steg 3 i [steg-för-steg-guiden](docs/steg-for-steg.md).
+
 ### Det här behöver du
 
 - En personal access token i GitLab med scope `api`: avataren > *Edit
