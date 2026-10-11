@@ -338,7 +338,7 @@ Argo CD om?
 ```bash
 export KUBECONFIG=$PWD/$TF_VAR_cluster_name.kubeconfig
 kubectl get nodes
-kubectl get nodes -o custom-columns=NOD:.metadata.name,TAINT:.spec.taints[*].effect
+kubectl get nodes -o 'custom-columns=NOD:.metadata.name,TAINT:.spec.taints[*].effect'
 ```
 
 Båda noderna ska vara `Ready`. Control planen har `NoSchedule`, workern
@@ -363,8 +363,9 @@ alla images laddas ner, och `Progressing` en stund är normalt. Står en app
 kvar i `OutOfSync` eller `Degraded`, öppna den i Argo CD:s UI (steg 6) och
 läs felet.
 
-Lägg gärna `KUBECONFIG`-raden sist i `.envrc`, så slipper du skriva den i
-varje terminal.
+Använder du direnv kan du lägga `KUBECONFIG`-raden sist i `.envrc`, så
+slipper du skriva den i varje terminal. direnv läser filen från roten, så
+`$PWD` blir rätt.
 
 ## Steg 6: titta in i apparna
 
