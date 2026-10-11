@@ -19,7 +19,7 @@ klar.
 
 | Del | Läge | Var i repot | Steg |
 |---|---|---|---|
-| Kluster: control planes och en worker | klart | `terraform/`, `ansible/` | 3, 4 |
+| Kluster: control planes och en worker | klart i dev med en worker-VM. Bare metal-workern är inte ansluten än, det görs i prod | `terraform/`, `ansible/` | 3, 4 |
 | Krypterad trafik mellan noderna | klart, WireGuard i k3s | `ansible/roles/k3s_server/` | 4 |
 | DNS: wildcard mot workern | klart | `dns/` | gemensam, rörs inte här |
 | Certifikat och HTTPS | saknas | | |
@@ -436,6 +436,9 @@ git switch main
 git push origin --delete "$MIN_GREN"
 git branch -D "$MIN_GREN"
 ```
+
+Nu följer klustret en gren som inte finns. Riv det i steg 8, eller kör
+playbooken utan `argocd_revision` så följer det `main` igen.
 
 ## Steg 8: riv
 
