@@ -11,8 +11,9 @@
       - app_secrets_synapse_registration_shared_secret | length > 0
     fail_msg: >-
       GRAFANA_ADMIN_PASSWORD, MATTERMOST_WEBHOOK_URL, SYNAPSE_POSTGRES_PASSWORD
-      eller SYNAPSE_REGISTRATION_SHARED_SECRET saknas i miljön. Värdena finns
-      i CI-variablerna med samma namn, se README.
+      eller SYNAPSE_REGISTRATION_SHARED_SECRET saknas i miljön. I prod kommer
+      de från CI-variablerna med samma namn, i dev från din .envrc i repots
+      rot, se docs/steg-for-steg.md.
     quiet: true
 
 - name: Skapar apparnas secrets
