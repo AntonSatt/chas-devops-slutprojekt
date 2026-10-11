@@ -379,7 +379,7 @@ terminal, avsluta med Ctrl-C. Med `KUBECONFIG` satt som i steg 5:
 | Grafana | `kubectl -n monitoring port-forward svc/monitoring-grafana 3000:80` | http://localhost:3000 | `admin` och `GRAFANA_ADMIN_PASSWORD` |
 | Prometheus | `kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090` | http://localhost:9090 | ingen |
 | Alertmanager | `kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-alertmanager 9093:9093` | http://localhost:9093 | ingen |
-| Synapse | `kubectl -n synapse port-forward svc/synapse 8008:8008` | http://localhost:8008 | användare enligt `NOTES.txt` |
+| Synapse | `kubectl -n synapse port-forward svc/synapse 8008:8008` | http://localhost:8008 | användare, se nedan |
 
 Argo CD:s lösenord:
 
@@ -395,9 +395,16 @@ Det här ska du se, och kunna koppla till uppgiften:
   även node-exporter på control planen (port 9100 i brandväggen).
 - **Grafana:** under *Dashboards* finns både noderna (infrastruktur) och
   poddarna (workloads). Uppgiften kräver båda.
-- **Synapse:** skapa en användare enligt
-  `charts/synapse/templates/NOTES.txt` och prova
-  `curl -s localhost:8008/_matrix/client/versions`.
+
+**Synapse:** skapa en användare och prova API:t medan port-forwarden kör.
+`-a` gör användaren till admin:
+
+```bash
+MATRIX_USER=$TF_VAR_cluster_name
+kubectl -n synapse exec -it deploy/synapse -c synapse -- \
+  register_new_matrix_user -c /config/homeserver.yaml -u "$MATRIX_USER" -a http://localhost:8008
+curl -s localhost:8008/_matrix/client/versions
+```
 
 Fördjupning, med övningar och troliga frågor:
 [argo-cd.md](gitops/argo-cd.md), [monitoring.md](monitoring/monitoring.md),
@@ -415,7 +422,8 @@ root-appen, resten finns redan:
 
 ```bash
 MIN_GREN=ovning/$TF_VAR_cluster_name
-git switch -c "$MIN_GREN" main
+git fetch origin
+git switch -c "$MIN_GREN" origin/main
 git push -u origin "$MIN_GREN"
 cd ansible
 ansible-playbook site.yml -e cluster="$TF_VAR_cluster_name" -e argocd_revision="$MIN_GREN"
@@ -426,9 +434,13 @@ cd ..
 `kubernetes/manifests/larmtest/deployment.yaml`, sedan:
 
 ```bash
-git commit -am "test(larm): larmtest på"
+git add kubernetes/manifests/larmtest/deployment.yaml
+git commit -m "test(larm): larmtest på"
 git push
 ```
+
+Lägg bara till filen du ändrat. `git commit -a` kan få med
+`terraform/.terraform.lock.hcl` om `init` har skrivit om den.
 
 Följ vad som händer:
 
@@ -461,6 +473,7 @@ Argo CD synka. Fundera på vad du förväntar dig innan du pushar.
 Grenen ska inte mergas. Städa när du är klar:
 
 ```bash
+MIN_GREN=ovning/$TF_VAR_cluster_name
 git switch main
 git push origin --delete "$MIN_GREN"
 git branch -D "$MIN_GREN"
@@ -474,6 +487,15 @@ playbooken utan `argocd_revision` så följer det `main` igen.
 Servrarna kostar per timme, och spelreglerna säger att labb-VM:ar rivs när
 du är klar. Riv innan du slutar för dagen.
 
+Kontrollera först vilken state du står på. Det ska vara din
+(Developer har bara sin lokala och får inget svar här):
+
+```bash
+cd terraform
+grep -o 'terraform/state/[^"/]*' .terraform/terraform.tfstate | head -1
+cd ..
+```
+
 ```bash
 cd terraform
 terraform destroy
@@ -481,14 +503,17 @@ cd ..
 rm "$TF_VAR_cluster_name.kubeconfig"
 ```
 
-Läs planen innan du svarar `yes`: den ska bara ta bort saker med ditt namn.
-Står du på `grupprojekt-terraform-state` (prod) eller `dns`, svara nej.
+Läs planen innan du svarar `yes`: varje resurs ska börja med ditt namn.
+Står det `group1-` eller någon annans namn, svara nej.
 
-Kontrollera att inga servrar finns kvar hos Hetzner. Svaret ska vara `0`:
+Kontrollera att inga servrar finns kvar hos Hetzner. Svaret ska vara `0`.
+Får du en text i stället är det ett fel från API:t, oftast att
+`HCLOUD_TOKEN` inte är laddad:
 
 ```bash
 curl -s -H "Authorization: Bearer $HCLOUD_TOKEN" \
-  "https://api.hetzner.cloud/v1/servers?label_selector=cluster=$TF_VAR_cluster_name" | jq '.servers | length'
+  "https://api.hetzner.cloud/v1/servers?label_selector=cluster=$TF_VAR_cluster_name" \
+  | jq 'if .servers then (.servers | length) else .error.message end'
 ```
 
 Nästa gång börjar du på steg 3. `.envrc` och nyckeln finns kvar.
