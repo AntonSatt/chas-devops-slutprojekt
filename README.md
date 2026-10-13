@@ -154,6 +154,9 @@ ser allas kluster, med en grupp per kluster: `cluster_<namn>`. Prod är
 `cluster_group1`, där även bare metal-workern ingår. Gruppen `workers`
 innehåller bare metal-workern och alla worker-VM:ar i dev.
 
+Vissa playbooks kräver variabler från ansible-vault. För det behöver man
+skapa en .vaul_pass fil som innehåller lösenordet. Filen ska vara i ansible mappen.
+
 **`site.yml` körs alltid mot ett kluster, som du väljer med `-e cluster`.**
 Playen riktas mot `cluster_{{ cluster }}`. Glömmer du `-e` avbryter Ansible
 med `'cluster' is undefined` innan något körs, i stället för att träffa alla
