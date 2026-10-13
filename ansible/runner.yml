@@ -1,0 +1,11 @@
+
+- name: Set up gitlab runners
+  hosts: runners
+  remote_user: group1
+  roles:
+    - role: docker_install
+      become: true
+      tags: [docker]
+    - role: docker_setup_gitlab_runner
+      become: false
+      tags: [runner]

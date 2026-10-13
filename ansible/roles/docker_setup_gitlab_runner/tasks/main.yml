@@ -1,0 +1,28 @@
+
+- name: Create dirs
+  become: true
+  ansible.builtin.file:
+    mode: '0775'
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+  loop:
+    - /opt/gitlab-runner
+    - /srv/gitlab-runner
+
+- name: Copy compose file
+  ansible.builtin.copy:
+    src: "{{ role_path }}/files/docker-compose.yml"
+    dest: /opt/gitlab-runner/docker-compose.yml
+    mode: '0664'
+
+- name: Copy config.toml
+  ansible.builtin.template:
+    src: "{{ role_path }}/templates/config.toml"
+    dest: /srv/gitlab-runner/config.toml
+    mode: '0664'
+    
+- name: Start compose file
+  community.docker.docker_compose_v2:
+    project_src: /opt/gitlab-runner

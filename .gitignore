@@ -28,3 +28,4 @@ group1_hetzner
 # Ansible
 .ansible/
 ansible/collections/
+ansible/.vault_pass

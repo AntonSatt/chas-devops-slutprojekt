@@ -5,6 +5,10 @@ worker, byggt från GitLab CI med Terraform och Ansible.
 
 Deadline 2026-10-25, Final Lab 2026-10-26. Alla ska kunna förklara alla delar.
 
+Ny i projektet, eller vill du förstå hur allt hänger ihop? Bygg ett eget
+kluster från noll med [steg-för-steg-guiden](docs/steg-for-steg.md). Den
+visar också vilka delar som är klara.
+
 ## Arbetssätt
 
 - `main` är skyddad, allt går via merge request.
@@ -47,6 +51,9 @@ bara via merge request.
 
 Ska du bara köra Ansible behöver du inget av detta, se *Ansible* nedan.
 
+Som Developer kan du inte skriva state i GitLab. Kör då lokal state, se
+steg 3 i [steg-för-steg-guiden](docs/steg-for-steg.md).
+
 ### Det här behöver du
 
 - En personal access token i GitLab med scope `api`: avataren > *Edit
@@ -77,7 +84,9 @@ export TF_VAR_cluster_name=...
 export TF_VAR_admin_cidr=...
 ```
 
-Kör `direnv allow` efter varje ändring i filen.
+Kör `direnv allow` efter varje ändring i filen. Ha bara den här enda
+`.envrc`: direnv läser den närmaste filen, så en `.envrc` i `ansible/` eller
+`terraform/` gör att den i roten inte läses alls.
 
 ### Init
 
@@ -126,14 +135,15 @@ ansible-galaxy collection install -r requirements.yml -p collections --force
 ```
 
 `K3S_TOKEN` är join-token för ditt kluster. Alla control planes i ett kluster
-måste ha samma, så den skapas en gång och sparas i `.envrc`:
+måste ha samma, så den skapas en gång och sparas i `.envrc` i repots rot.
+Från `ansible/`:
 
 ```bash
-echo "export K3S_TOKEN=$(openssl rand -hex 32)" >> .envrc
+echo "export K3S_TOKEN=$(openssl rand -hex 32)" >> ../.envrc
 direnv allow
 ```
 
-Utan direnv: kör `source .envrc` i varje ny terminal. Skapa inte en ny token
+Utan direnv: kör `source ../.envrc` i varje ny terminal. Skapa inte en ny token
 med `export` direkt i terminalen, och byt aldrig token på ett kluster som
 redan finns, då kan resten av noderna inte ansluta. Din token gäller bara
 ditt kluster. Prod har en egen i CI-variabeln med samma namn. Saknas
@@ -143,6 +153,9 @@ Inventoryn frågar Hetzners API direkt och läser aldrig Terraform-state. Den
 ser allas kluster, med en grupp per kluster: `cluster_<namn>`. Prod är
 `cluster_group1`, där även bare metal-workern ingår. Gruppen `workers`
 innehåller bare metal-workern och alla worker-VM:ar i dev.
+
+Vissa playbooks kräver variabler från ansible-vault. För det behöver man
+skapa en .vaul_pass fil som innehåller lösenordet. Filen ska vara i ansible mappen.
 
 **`site.yml` körs alltid mot ett kluster, som du väljer med `-e cluster`.**
 Playen riktas mot `cluster_{{ cluster }}`. Glömmer du `-e` avbryter Ansible
@@ -285,7 +298,7 @@ ServiceMonitors, dashboards och larmregler från alla namespaces. Hur det
 hänger ihop, och övningar: [docs/monitoring/monitoring.md](docs/monitoring/monitoring.md).
 
 Grafanas admin-lösenord kommer från CI-variabeln `GRAFANA_ADMIN_PASSWORD`.
-I dev skapar du ett eget, en gång:
+I dev skapar du ett eget, en gång, från repots rot:
 
 ```bash
 echo "export GRAFANA_ADMIN_PASSWORD=$(openssl rand -hex 16)" >> .envrc
@@ -327,7 +340,8 @@ deployar den som appen `synapse`. Valen, övningar och hur man testar lokalt:
 [charts/synapse/README.md](charts/synapse/README.md).
 
 Secreten kommer från CI-variablerna `SYNAPSE_POSTGRES_PASSWORD` och
-`SYNAPSE_REGISTRATION_SHARED_SECRET`. I dev skapar du egna, en gång:
+`SYNAPSE_REGISTRATION_SHARED_SECRET`. I dev skapar du egna, en gång, från
+repots rot:
 
 ```bash
 echo "export SYNAPSE_POSTGRES_PASSWORD=$(openssl rand -hex 16)" >> .envrc
