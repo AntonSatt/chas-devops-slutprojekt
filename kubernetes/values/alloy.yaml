@@ -1,4 +1,12 @@
 alloy:
+  # montera nodens /var/log i Alloy, där journald sparar loggarna
+  mounts:
+    varlog: true
+    # montera nodens machine-id så journal-läsaren hittar rätt undermapp
+    extra:
+      - name: machine-id
+        mountPath: /etc/machine-id
+        readOnly: true
   configMap:
     # Alloys konfiguration. Källa: Alloys dokumentation,
     # "Collect Kubernetes logs and forward them to Loki".
@@ -75,3 +83,30 @@ alloy:
         targets    = discovery.relabel.pod_logs.output
         forward_to = [loki.write.default.receiver]
       }
+
+      loki.relabel "journal" {
+        forward_to = []
+        
+        rule {
+          source_labels = ["__journal__systemd_unit"]
+          target_label = "unit"
+        }
+        rule {
+          source_labels = ["__journal__hostname"]
+          target_label = "node"
+          }
+        }
+
+        loki.source.journal "read" {
+          forward_to    = [loki.write.default.receiver]
+          relabel_rules = loki.relabel.journal.rules
+          labels        = {job = "journal"}
+        }
+controller:
+  volumes:
+    # volymen som pekar på nodens /etc/machine-id
+    extra:
+      - name: machine-id
+        hostPath:
+          path: /etc/machine-id
+          type: File
