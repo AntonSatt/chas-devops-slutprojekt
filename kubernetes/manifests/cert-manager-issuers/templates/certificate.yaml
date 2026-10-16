@@ -1,0 +1,19 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-group-1
+  namespace: kube-system
+spec:
+  # Namnet på hemligheten (Secret) där certifikatet och den privata nyckeln ska sparas
+  secretName: wildcard-group-1-tls
+
+  # Domännamn som certifikatet ska omfatta
+  dnsNames:
+    - "*.group-1.doe25.chas-lab.dev"
+    - group-1.doe25.chas-lab.dev
+
+  # Referens till din Issuer eller ClusterIssuer
+  issuerRef:
+    name: {{ if eq .Values.cluster "group1" }}letsencrypt-prod{{ else }}letsencrypt-staging{{ end }}
+    kind: ClusterIssuer
+    group: cert-manager.io

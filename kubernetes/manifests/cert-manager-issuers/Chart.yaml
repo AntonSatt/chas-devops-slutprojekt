@@ -1,0 +1,4 @@
+# En chart bara för att certifikatet ska kunna välja issuer efter kluster.
+apiVersion: v2
+name: cert-manager-issuers
+version: 0.1.0
