@@ -1,0 +1,34 @@
+# ClusterIssuers för cert-manager, manifesten i kubernetes/manifests/cert-manager-issuers.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager-issuers
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.repoURL }}
+    targetRevision: {{ .Values.revision }}
+    path: kubernetes/manifests/cert-manager-issuers
+    helm:
+      parameters:
+        - name: cluster
+          value: {{ .Values.cluster | quote }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # ClusterIssuer kommer från cert-manager-appen. Finns den inte än vid första
+      # synken försöker appen igen istället för att fastna.
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m
