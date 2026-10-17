@@ -31,7 +31,7 @@ Skyddet ligger i pipelinen i stället: på grenar körs bara validate och
 | Variabel | Innehåll |
 |---|---|
 | `HCLOUD_TOKEN` | Hetzner API-token (masked) |
-| `TF_VAR_tsig_secret` | TSIG-secret för DNS (masked) |
+| `TF_VAR_tsig_secret` | TSIG-secret för DNS och cert-manager (DNS-01) (masked) |
 | `GROUP1_SSH_KEY` | gruppens privata SSH-nyckel, typ File |
 | `MATTERMOST_WEBHOOK_URL` | webhook för larm (masked) |
 | `K3S_TOKEN` | klustrets join-token (masked) |

@@ -4,3 +4,4 @@ app_secrets_grafana_admin_password: "{{ lookup('ansible.builtin.env', 'GRAFANA_A
 app_secrets_mattermost_webhook_url: "{{ lookup('ansible.builtin.env', 'MATTERMOST_WEBHOOK_URL') }}"
 app_secrets_synapse_postgres_password: "{{ lookup('ansible.builtin.env', 'SYNAPSE_POSTGRES_PASSWORD') }}"
 app_secrets_synapse_registration_shared_secret: "{{ lookup('ansible.builtin.env', 'SYNAPSE_REGISTRATION_SHARED_SECRET') }}"
+app_secrets_tsig_secret: "{{ lookup('ansible.builtin.env', 'TF_VAR_tsig_secret') }}"

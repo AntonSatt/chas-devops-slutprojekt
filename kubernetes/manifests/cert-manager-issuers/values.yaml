@@ -1,0 +1,4 @@
+# Sätts av Applicationen i kubernetes/apps/templates/cert-manager-issuers.yaml.
+# Bara group1 (prod) får Let's Encrypt prod, alla andra staging, så att dev-
+# kluster inte äter upp gränsen på 5 likadana cert per vecka.
+cluster: ""
