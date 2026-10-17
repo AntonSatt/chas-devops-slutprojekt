@@ -103,6 +103,10 @@ alloy:
           labels        = {job = "journal"}
         }
 controller:
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
   volumes:
     # volymen som pekar på nodens /etc/machine-id
     extra:
