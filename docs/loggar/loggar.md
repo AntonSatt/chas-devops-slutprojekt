@@ -65,3 +65,19 @@ Med port-forward igång frågar man Loki vilka värden etiketten `job` har:
     curl -s http://127.0.0.1:3100/loki/api/v1/label/job/values
 
 Finns `journal` i svaret har Loki tagit emot journald-loggar.
+
+
+
+## Toleration
+
+En taint är som en skylt på en nod. Den stoppar nya poddar från att placeras där. En pod som ändå ska köras på noden behöver en toleration som matchar tainten.
+
+Prod-klustrets control planes har tainten `node-role.kubernetes.io/control-plane:NoSchedule`. Den sätts av Ansible i `ansible/roles/k3s_server/tasks/main.yml`, men bara när `k3s_taint_control_planes` är sann. Därför har prod tainten men inte dev-klustren.
+
+Utan toleration hamnar Alloy bara på workern, inte på de tre control planes. Då saknas loggarna därifrån. Därför har Alloy en toleration för tainten (`controller.tolerations` i `kubernetes/values/alloy.yaml`).
+
+### Så testade vi det
+
+1. Satte samma taint på dev-noden: `kubectl taint nodes adam-node-cp-0 node-role.kubernetes.io/control-plane:NoSchedule`
+2. Tog bort Alloy-podden. `kubectl get daemonset -n logging` visade `DESIRED 0`: utan toleration ville Kubernetes inte placera någon Alloy på noden.
+3. Uppdaterade Alloy med tolerationen. Då visade den `DESIRED 1` och `READY 1`.
