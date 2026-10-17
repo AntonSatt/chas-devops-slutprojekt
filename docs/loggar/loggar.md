@@ -18,7 +18,7 @@ Loki kan kräva att varje anrop talar om vilken tenant (vem) det gäller. Vi är
 
 ## Alloy
 
-Alloy hämtar loggar från poddarna och skickar dem till Loki.
+Alloy hämtar loggar från poddarna och från journald på noderna, och skickar dem till Loki.
 
 ### Varför DaemonSet
 
@@ -81,3 +81,20 @@ Utan toleration hamnar Alloy bara på workern, inte på de tre control planes. D
 1. Satte samma taint på dev-noden: `kubectl taint nodes adam-node-cp-0 node-role.kubernetes.io/control-plane:NoSchedule`
 2. Tog bort Alloy-podden. `kubectl get daemonset -n logging` visade `DESIRED 0`: utan toleration ville Kubernetes inte placera någon Alloy på noden.
 3. Uppdaterade Alloy med tolerationen. Då visade den `DESIRED 1` och `READY 1`.
+
+
+## Grafana-datasource
+
+Grafana hittar Loki genom en ConfigMap med labeln `grafana_datasource: "1"`. Grafana letar bara efter sådana ConfigMaps i sitt eget namespace, `monitoring`, så det är där den ligger. Det står i monitoring-chartets standardinställningar, och `monitoring.yaml` ändrar inte på det.
+
+Filen ligger i `kubernetes/manifests/loggar/grafana-datasource.yaml` och pekar på `http://loki.logging.svc.cluster.local:3100`, adressen från Lokis NOTES.
+
+## Argo CD
+
+Loggdelen installeras av tre Argo CD-appar i `kubernetes/apps/templates/`:
+
+- `loki` installerar Loki med `kubernetes/values/loki.yaml`
+- `alloy` installerar Alloy med `kubernetes/values/alloy.yaml`
+- `loggar` lägger in manifesten i `kubernetes/manifests/loggar/`, just nu Grafana-datasourcen
+
+`loki` och `alloy` är byggda som `monitoring.yaml`, med charten från ett externt repo och values från vårt. `loggar` är byggd som `larmtest.yaml` och läser en mapp i repot. Chartversionerna är låsta, 18.15.1 för Loki och 1.13.1 för Alloy.
