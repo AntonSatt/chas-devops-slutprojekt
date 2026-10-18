@@ -95,8 +95,38 @@ dashboards.
   lösenord fungerar inte med Argo CD, eftersom det slumpas om vid varje
   synk.
 
-Grafana nås med port-forward tills wildcard-certifikatet finns. Sen får
-den en ingress på HTTPS.
+## Grafana på HTTPS
+
+I prod nås Grafana på https://grafana.group-1.doe25.chas-lab.dev. Det är
+fem delar som samarbetar, och bara den sista är monitoringens:
+
+```mermaid
+flowchart LR
+  B["webbläsaren"] -->|"DNS: *.group-1 pekar på workern"| T["Traefik på workern, port 443"]
+  T -->|"Ingress: host grafana.group-1..."| S["Service monitoring-grafana"]
+  S --> G["Grafana-podden"]
+  C["wildcard-certet, TLSStore"] -.->|"standardcert"| T
+```
+
+| Del | Gör | Var |
+|---|---|---|
+| DNS | `*.group-1.doe25.chas-lab.dev` pekar på workern | `dns/` |
+| Traefik | k3s inbyggda ingress controller, tar emot på 80 och 443 och skickar 80 vidare till 443 | k3s, `traefik-redirect.yaml` |
+| Certet | cert-manager hämtar wildcard-certet från Let's Encrypt, Traefik använder det för alla hostar | `kubernetes/manifests/cert-manager-issuers/` |
+| Ingress | regeln "host grafana.group-1... går till Service `monitoring-grafana` port 80" | `grafana.ingress` i `kubernetes/values/monitoring.yaml` |
+| `root_url` | adressen Grafana själv bygger länkar med | `grafana.grafana.ini` i samma fil |
+
+Ingressen har ingen `tls`-sektion. Traefik har wildcard-certet som
+standardcert, så varje host under `group-1` får HTTPS utan att appen gör
+något.
+
+Bara Grafana får en ingress, eftersom den har inloggning. Prometheus och
+Alertmanager saknar inloggning, så den som når dem kan läsa allt och tysta
+larm. De nås bara med port-forward, liksom Argo CD:s UI.
+
+I ett dev-kluster pekar DNS fortfarande på prod. Testa med `curl --resolve`,
+se steg 6 i [steg-for-steg.md](../steg-for-steg.md). Dev får ett cert från
+Let's Encrypts staging, så där är en certvarning väntad.
 
 ## Begrepp att kunna
 
@@ -109,6 +139,9 @@ den en ingress på HTTPS.
 - **PromQL:** frågespråket. `rate()` ger ökning per sekund för en räknare,
   `sum by (namespace)` summerar per namespace.
 - **Retention:** hur länge metrics sparas, 15 dagar på en PVC på 20 GB.
+- **Ingress:** en regel som säger vilken host (och sökväg) som ska till
+  vilken Service. Ingress controllern, hos oss Traefik, är programmet som
+  läser reglerna och tar emot trafiken.
 
 ## Övningar
 
@@ -132,6 +165,10 @@ den en ingress på HTTPS.
    `kubernetes/values/monitoring.yaml`, pusha till din gren och se appen
    `monitoring` synkas. Kontrollera med
    `kubectl -n monitoring get prometheus -o jsonpath='{.items[0].spec.retention}'`.
+7. **Byt Grafanas adress.** Ändra hosten till `dashboards.group-1.doe25.chas-lab.dev`
+   på båda ställena i `kubernetes/values/monitoring.yaml`, pusha till din
+   gren och kontrollera med `kubectl -n monitoring get ingress`. Varför
+   behövs ingen ny DNS-post eller nytt cert?
 
 ## Troliga frågor
 
@@ -148,3 +185,10 @@ den en ingress på HTTPS.
   att räkna om. Hos oss var det webhookens hooks, se ovan.
 - *Ett target är nere. Hur felsöker du?* *Status > Targets* visar felet.
   Ofta är det en brandvägg, som med port 9100.
+- *Hur kommer man åt Grafana, och varför inte Prometheus på samma sätt?*
+  Grafana har en ingress med HTTPS och inloggning. Prometheus och
+  Alertmanager saknar inloggning och nås bara med port-forward.
+- *Grafana svarar inte på sin adress. Var börjar du?* Följ vägen in:
+  `kubectl -n monitoring get ingress` (finns regeln?), `get svc` och
+  `get pods` (finns något bakom?), sedan certet med
+  `kubectl -n kube-system get certificate`.
