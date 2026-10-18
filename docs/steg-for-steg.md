@@ -579,9 +579,9 @@ det som bara finns där: tre control planes och bare metal-workern från
 CI-variablerna i stället för din `.envrc`, när en MR mergas till `main`.
 Steg 5 till 7 är desamma.
 
-Pipelinen finns inte än. Kör aldrig steg 3 eller 4 mot prod från din dator,
-se *Regler* i README. När pipelinen finns beskriver guiden vad dess jobb
-gör, och tabellen överst får en rad för den.
+Pipelinen ligger i draft-MR !29 per 2026-10-18 och är inte mergad. Kör
+aldrig steg 3 eller 4 mot prod från din dator, se *Regler* i README. När
+pipelinen är mergad beskriver guiden vad dess jobb gör.
 
 ## När en del blir klar
 
