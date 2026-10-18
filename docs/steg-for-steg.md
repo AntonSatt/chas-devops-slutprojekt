@@ -207,7 +207,7 @@ Kontrollera att allt är satt, utan att skriva ut värdena:
 ```bash
 for v in HCLOUD_TOKEN GITLAB_ACCESS_TOKEN GITLAB_USER_NAME \
   TF_VAR_cluster_name TF_VAR_admin_cidr K3S_TOKEN \
-  ARGOCD_REPO_USER ARGOCD_REPO_TOKEN MATTERMOST_WEBHOOK_URL \
+  ARGOCD_REPO_USER ARGOCD_REPO_TOKEN MATTERMOST_WEBHOOK_URL TF_VAR_tsig_secret \
   GRAFANA_ADMIN_PASSWORD SYNAPSE_POSTGRES_PASSWORD SYNAPSE_REGISTRATION_SHARED_SECRET; do
   val=$(printenv "$v")
   if [ -n "$val" ] && [ "$val" != "..." ]; then echo "ok      $v"; else echo "SAKNAS  $v"; fi
@@ -218,6 +218,11 @@ unset val
 `SAKNAS` betyder att variabeln inte är satt, är tom eller fortfarande har
 `...` från mallen. Som Developer blir de två `GITLAB_`-raderna `SAKNAS`, det
 är väntat.
+
+Developer som inte har fått `TF_VAR_tsig_secret`: ett påhittat värde tar
+dig förbi kontrollen i `app_secrets`, och allt utom certet kommer upp. Utan
+den riktiga nyckeln får cert-manager inte skriva i DNS, så certet blir
+aldrig klart.
 
 Gå in i `ansible/` och kör loopen igen. Svaret ska bli detsamma. Blir
 nästan allt `SAKNAS` där men inte i roten har du en gammal `ansible/.envrc`
