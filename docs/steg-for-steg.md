@@ -11,7 +11,7 @@ delarna och ändringar görs via commit, så alla behöver ha sett hela kedjan.
 Varför sakerna är byggda som de är står i README och i `docs/`. Guiden
 länkar dit i stället för att upprepa det.
 
-## Läget per 2026-10-11
+## Läget per 2026-10-18
 
 *Klart* betyder byggt och testat i ett dev-kluster. Inget är byggt i prod
 än, det väntar på pipelinen. Uppdatera tabellen i samma MR som en del blir
@@ -22,13 +22,13 @@ klar.
 | Kluster: control planes och en worker | klart i dev med en worker-VM. Bare metal-workern är inte ansluten än, det görs i prod | `terraform/`, `ansible/` | 3, 4 |
 | Krypterad trafik mellan noderna | klart, WireGuard i k3s | `ansible/roles/k3s_server/` | 4 |
 | DNS: wildcard mot workern | klart | `dns/` | gemensam, rörs inte här |
-| Certifikat och HTTPS | saknas | | |
+| Certifikat och HTTPS | klart: cert-manager hämtar ett wildcard-cert (staging i dev, riktigt bara i prod), Traefik skickar HTTP vidare till HTTPS | `kubernetes/apps/templates/cert-manager*.yaml`, `kubernetes/manifests/cert-manager-issuers/` | 5, 6 |
 | Continuous deployment | klart, Argo CD | `kubernetes/apps/` | 4, 7 |
-| Monitoring | klart | `kubernetes/values/monitoring.yaml` | 6 |
+| Monitoring | klart. Grafanas ingress på HTTPS är byggd men inte testad i dev | `kubernetes/values/monitoring.yaml` | 6 |
 | Larm | klart | `kubernetes/values/monitoring.yaml`, `kubernetes/manifests/larmtest/` | 7 |
-| Loggar | saknas | | |
+| Loggar | i MR !33, inte mergad | | |
 | Secrets | delvis: CI-variabler som Ansible gör till Secrets, Sealed Secrets planerat | `ansible/roles/app_secrets/` | 2, 4 |
-| Pipeline | saknas, ingen `.gitlab-ci.yml` | | |
+| Pipeline | i draft-MR !29, bygger ett helt kluster i en MR men är inte mergad | | |
 | Synapse, individuell del | klart | `charts/synapse/` | 6 |
 
 ## Översikt
@@ -38,7 +38,7 @@ flowchart LR
   E[".envrc"] --> T["Terraform: servrar och brandvägg"]
   T --> A["Ansible: k3s, secrets, Argo CD"]
   A --> R["Argo CD: allt annat från git"]
-  R --> X["monitoring, larm, synapse"]
+  R --> X["cert-manager, monitoring, larm, synapse"]
 ```
 
 | Steg | Verktyg | Vad som händer | I prod, när pipelinen finns |
@@ -535,5 +535,5 @@ gör, och tabellen överst får en rad för den.
 ## När en del blir klar
 
 Lägg till ett steg, eller en rad i steg 6, och uppdatera tabellen överst i
-samma MR. Certifikat och HTTPS, loggar, Sealed Secrets och pipelinen
-saknas per 2026-10-11.
+samma MR. Loggar (!33), Sealed Secrets och pipelinen (!29) saknas per
+2026-10-18.
