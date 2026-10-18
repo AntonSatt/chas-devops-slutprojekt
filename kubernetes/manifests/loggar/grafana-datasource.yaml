@@ -1,0 +1,21 @@
+# Loki som datasource i Grafana.
+# Grafanas sidecar plockar upp ConfigMaps med labeln grafana_datasource: "1"
+# i sitt eget namespace (kube-prometheus-stack, grafana.sidecar.datasources).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-datasource
+  namespace: monitoring
+  labels:
+    grafana_datasource: "1"
+data:
+  # formatet är Grafanas provisioning-fil för datasources
+  loki-datasource.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        type: loki
+        uid: loki
+        access: proxy
+        # adressen från Lokis NOTES, "Connecting Grafana to Loki"
+        url: http://loki.logging.svc.cluster.local:3100
