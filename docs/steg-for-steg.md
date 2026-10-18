@@ -22,7 +22,7 @@ klar.
 | Kluster: control planes och en worker | klart i dev med en worker-VM. Bare metal-workern är inte ansluten än, det görs i prod | `terraform/`, `ansible/` | 3, 4 |
 | Krypterad trafik mellan noderna | klart, WireGuard i k3s | `ansible/roles/k3s_server/` | 4 |
 | DNS: wildcard mot workern | klart | `dns/` | gemensam, rörs inte här |
-| Certifikat och HTTPS | saknas | | |
+| Certifikat och HTTPS | klart, wildcard via cert-manager (DNS-01), Traefik som Argo-app | `kubernetes/apps/templates/traefik.yaml`, `kubernetes/manifests/cert-manager-issuers/` | |
 | Continuous deployment | klart, Argo CD | `kubernetes/apps/` | 4, 7 |
 | Monitoring | klart | `kubernetes/values/monitoring.yaml` | 6 |
 | Larm | klart | `kubernetes/values/monitoring.yaml`, `kubernetes/manifests/larmtest/` | 7 |
@@ -535,5 +535,5 @@ gör, och tabellen överst får en rad för den.
 ## När en del blir klar
 
 Lägg till ett steg, eller en rad i steg 6, och uppdatera tabellen överst i
-samma MR. Certifikat och HTTPS, loggar, Sealed Secrets och pipelinen
-saknas per 2026-10-11.
+samma MR. Loggar, Sealed Secrets och pipelinen
+saknas per 2026-10-18.
