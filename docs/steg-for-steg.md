@@ -302,8 +302,15 @@ skriver den ut `cp_ips`, control planens adress.
 Efter play 5 tar Argo CD över, och allt annat kommer från git. Ansible
 körs alltid från `ansible/`, annars läses inte `ansible.cfg`.
 
+`ansible.cfg` säger att lösenordet till ansible-vault ligger i
+`ansible/.vault_pass`, och utan den filen stannar varje körning. Bara
+runnerns variabler (`group_vars/runners.yml`) är krypterade, så `site.yml`
+behöver inte det riktiga lösenordet, bara att filen finns. Filen är
+gitignorerad, och raden skriver inte över en fil som redan finns:
+
 ```bash
 cd ansible
+[ -f .vault_pass ] || echo dummy > .vault_pass
 ansible-galaxy collection install -r requirements.yml -p collections --force
 ansible-playbook site.yml -e cluster="$TF_VAR_cluster_name" --list-hosts
 cd ..
@@ -333,6 +340,7 @@ Argo CD om?
 
 | Felet | Orsak |
 |---|---|
+| `The vault password file ... was not found` | `.vault_pass` saknas i `ansible/`, se början av steg 4 |
 | `'cluster' is undefined` | `-e cluster=...` saknas. Skyddet är med flit, se README |
 | `... saknas i miljön` | en variabel saknas, kör kontrollen i steg 2 |
 | `hosts (0)` i `--list-hosts` | `.envrc` är inte laddad i `ansible/`, eller servrarna finns inte. Kör kontrollen i steg 2 från `ansible/` |
