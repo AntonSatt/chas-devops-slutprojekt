@@ -1,0 +1,17 @@
+Ghost är installerat som {{ include "ghost-chart.fullname" . }} i namespace {{ .Release.Namespace }}.
+
+{{- if .Values.ingress.enabled }}
+
+Bloggen nås på:
+{{- range .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- else }}
+
+Nå bloggen lokalt med port-forward:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "ghost-chart.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+och öppna http://127.0.0.1:{{ .Values.service.port }}
+{{- end }}
+
+Adminsidan finns på /ghost/ under samma adress.
+Databasens lösenord läses från Secreten {{ .Values.mysql.existingSecret }}.

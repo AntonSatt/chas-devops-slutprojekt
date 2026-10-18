@@ -5,3 +5,6 @@ app_secrets_mattermost_webhook_url: "{{ lookup('ansible.builtin.env', 'MATTERMOS
 app_secrets_synapse_postgres_password: "{{ lookup('ansible.builtin.env', 'SYNAPSE_POSTGRES_PASSWORD') }}"
 app_secrets_synapse_registration_shared_secret: "{{ lookup('ansible.builtin.env', 'SYNAPSE_REGISTRATION_SHARED_SECRET') }}"
 app_secrets_tsig_secret: "{{ lookup('ansible.builtin.env', 'TF_VAR_tsig_secret') }}"
+app_secrets_ghost_mysql_root_password: "{{ lookup('ansible.builtin.env', 'GHOST_MYSQL_ROOT_PASSWORD') }}"
+app_secrets_ghost_mysql_password: "{{ lookup('ansible.builtin.env', 'GHOST_MYSQL_PASSWORD') }}"
+app_secrets_ghost_mysql_exporter_password: "{{ lookup('ansible.builtin.env', 'GHOST_MYSQL_EXPORTER_PASSWORD') }}"

@@ -38,6 +38,7 @@ Skyddet ligger i pipelinen i stället: på grenar körs bara validate och
 | `GRAFANA_ADMIN_PASSWORD` | Grafana-admin (masked) |
 | `ARGOCD_REPO_USER` / `ARGOCD_REPO_TOKEN` | deploy-token så Argo CD kan läsa repot (token masked) |
 | `SYNAPSE_POSTGRES_PASSWORD` / `SYNAPSE_REGISTRATION_SHARED_SECRET` | Synapse lösenord till Postgres och hemligheten för att skapa användare (masked) |
+| `GHOST_MYSQL_ROOT_PASSWORD` / `GHOST_MYSQL_PASSWORD` / `GHOST_MYSQL_EXPORTER_PASSWORD` | Ghosts MySQL: root, Ghosts användare och exporterns användare (masked) |
 
 Skicka aldrig värden i klartext i en kanal.
 
@@ -377,6 +378,21 @@ echo "export SYNAPSE_REGISTRATION_SHARED_SECRET=$(openssl rand -hex 32)" >> .env
 
 Första användaren skapas med `register_new_matrix_user`, se
 `charts/synapse/templates/NOTES.txt`.
+
+## Ghost
+
+Ghost med MySQL, en egen chart i `charts/ghost/`. Argo CD deployar den som
+appen `ghost`, på https://ghost.group-1.doe25.chas-lab.dev.
+
+Secreten `ghost-mysql` kommer från CI-variablerna `GHOST_MYSQL_ROOT_PASSWORD`,
+`GHOST_MYSQL_PASSWORD` och `GHOST_MYSQL_EXPORTER_PASSWORD`. I dev skapar du
+egna, en gång, från repots rot:
+
+```bash
+echo "export GHOST_MYSQL_ROOT_PASSWORD=$(openssl rand -hex 16)" >> .envrc
+echo "export GHOST_MYSQL_PASSWORD=$(openssl rand -hex 16)" >> .envrc
+echo "export GHOST_MYSQL_EXPORTER_PASSWORD=$(openssl rand -hex 16)" >> .envrc
+```
 
 ## Spelregler
 

@@ -1,0 +1,25 @@
+# Headless service för MySQL. Ger StatefulSetens pod ett stabilt DNS-namn
+# som Ghost ansluter till.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ghost-chart.fullname" . }}-mysql
+  labels:
+    {{- include "ghost-chart.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+spec:
+  # headless: ingen egen IP, DNS pekar direkt på podden
+  clusterIP: None
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: mysql
+    {{- if .Values.metrics.enabled }}
+    # exporterns port, ServiceMonitor pekar på den via namnet metrics
+    - name: metrics
+      port: 9104
+      targetPort: metrics
+    {{- end }}
+  selector:
+    {{- include "ghost-chart.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql

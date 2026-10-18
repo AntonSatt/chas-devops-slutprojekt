@@ -1,0 +1,15 @@
+# Disk för Ghosts innehåll (bilder, teman). ReadWriteOnce kan bara kopplas
+# till en pod åt gången, därför kör Ghost med en replika.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ghost-chart.fullname" . }}-content
+  labels:
+    {{- include "ghost-chart.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ghost
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.ghost.persistence.size }}

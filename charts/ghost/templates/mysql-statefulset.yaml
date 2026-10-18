@@ -1,0 +1,90 @@
+# MySQL som StatefulSet: fast podnamn och egen disk som finns kvar vid omstart.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "ghost-chart.fullname" . }}-mysql
+  labels:
+    {{- include "ghost-chart.labels" . | nindent 4 }}
+    # skiljer MySQL-poddarna från Ghost-poddarna i samma release
+    app.kubernetes.io/component: mysql
+spec:
+  # headless service som ger podden ett stabilt DNS-namn
+  serviceName: {{ include "ghost-chart.fullname" . }}-mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ghost-chart.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mysql
+  template:
+    metadata:
+      labels:
+        {{- include "ghost-chart.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: "{{ .Values.mysql.image.repository }}:{{ .Values.mysql.image.tag }}"
+          ports:
+            - name: mysql
+              containerPort: 3306
+          env:
+            # variabelnamnen kommer från mysql-imagens dokumentation på Docker Hub
+            - name: MYSQL_DATABASE
+              value: {{ .Values.mysql.database | quote }}
+            - name: MYSQL_USER
+              value: {{ .Values.mysql.user | quote }}
+            # lösenorden läses från Secreten, aldrig från values.yaml
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mysql.existingSecret }}
+                  key: mysql-root-password
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mysql.existingSecret }}
+                  key: mysql-password
+            - name: MYSQL_EXPORTER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mysql.existingSecret }}
+                  key: mysql-exporter-password
+          volumeMounts:
+            # MySQL sparar all data här
+            - name: data
+              mountPath: /var/lib/mysql
+            # MYSQL kör skripten i den här mappen när databasen skapas
+            - name: initdb
+              mountPath: /docker-entrypoint-initdb.d
+        {{- if .Values.metrics.enabled }}
+        # sidecar: läser MySQL:s statistik via 127.0.0.1 och visar den på /metrics
+        - name: mysqld-exporter
+          image: "{{ .Values.metrics.image.repository }}:{{ .Values.metrics.image.tag }}"
+          args:
+            # MySQL körs i samma pod, alltså via localhost
+            - --mysqld.address=127.0.0.1:3306
+            - --mysqld.username=exporter
+          env:
+            - name: MYSQLD_EXPORTER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mysql.existingSecret }}
+                  key: mysql-exporter-password
+          ports:
+            # exporterns standardport
+            - name: metrics
+              containerPort: 9104
+        {{- end }}
+      volumes:
+        - name: initdb
+          configMap:
+            name: {{ include "ghost-chart.fullname" . }}-mysql-initdb
+  # varje pod får en egen PVC, som finns kvar även om podden tas bort
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.mysql.persistence.size }}

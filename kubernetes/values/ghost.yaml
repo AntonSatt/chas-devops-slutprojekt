@@ -1,0 +1,13 @@
+ghost:
+  url: https://ghost.group-1.doe25.chas-lab.dev
+
+ingress:
+  hosts:
+    - host: ghost.group-1.doe25.chas-lab.dev
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+
+  tls:
+    - hosts:
+        - ghost.group-1.doe25.chas-lab.dev
