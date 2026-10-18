@@ -373,10 +373,23 @@ kubectl -n argocd get applications
 ```
 
 Efter några minuter ska alla vara `Synced` och `Healthy`: `root`,
-`monitoring`, `larmtest` och `synapse`. Första gången tar det längre, när
-alla images laddas ner, och `Progressing` en stund är normalt. Står en app
-kvar i `OutOfSync` eller `Degraded`, öppna den i Argo CD:s UI (steg 6) och
-läs felet.
+`cert-manager`, `cert-manager-issuers`, `monitoring`, `larmtest` och
+`synapse`. Första gången tar det längre, när alla images laddas ner, och
+`Progressing` en stund är normalt. Står en app kvar i `OutOfSync` eller
+`Degraded`, öppna den i Argo CD:s UI (steg 6) och läs felet.
+
+Certet:
+
+```bash
+kubectl -n kube-system get certificate
+```
+
+`wildcard-group-1` ska bli `READY True` inom några minuter. cert-manager
+bevisar för Let's Encrypt att vi äger domänen genom att skriva en TXT-post
+i DNS (DNS-01), därför behövs TSIG-nyckeln. Ditt kluster får ett cert från
+Let's Encrypts staging, bara `group1` får ett riktigt. Fastnar det på
+`False`, läs varför med `kubectl -n kube-system describe certificate
+wildcard-group-1` och följ kedjan nedåt med `get certificaterequest,order,challenge -A`.
 
 Använder du direnv kan du lägga `KUBECONFIG`-raden sist i `.envrc`, så
 slipper du skriva den i varje terminal. direnv läser filen från roten, så
@@ -401,6 +414,31 @@ Argo CD:s lösenord:
 ```bash
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo
 ```
+
+### HTTPS i ditt kluster
+
+I prod nås Grafana på https://grafana.group-1.doe25.chas-lab.dev och
+Synapse på https://matrix.group-1.doe25.chas-lab.dev. Ditt kluster har
+samma ingresser, men DNS pekar på prod. `curl --resolve` låter dig välja
+adressen själv och skicka samma hostnamn till din worker:
+
+```bash
+WORKER_IP=$(kubectl get node "$TF_VAR_cluster_name-node-worker-0" -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
+GRAFANA_HOST=grafana.group-1.doe25.chas-lab.dev
+curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' --resolve "$GRAFANA_HOST:80:$WORKER_IP" "http://$GRAFANA_HOST"
+curl -sk -o /dev/null -w '%{http_code}\n' --resolve "$GRAFANA_HOST:443:$WORKER_IP" "https://$GRAFANA_HOST/login"
+openssl s_client -connect "$WORKER_IP:443" -servername "$GRAFANA_HOST" </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer
+```
+
+| Rad | Ska visa | Bevisar |
+|---|---|---|
+| första `curl` | `301` eller `308` och en `https://`-adress | HTTP skickas vidare till HTTPS |
+| andra `curl` | `200` | Ingressen hittar Grafana. `-k` för att dev-certet är från staging |
+| `openssl` | subject `*.group-1.doe25.chas-lab.dev`, issuer med `STAGING` | Traefik använder wildcard-certet |
+
+I prod är issuern Let's Encrypt utan `STAGING`, och då behövs inte `-k`.
+Hela vägen in, och varför bara Grafana får en ingress:
+[monitoring.md](monitoring/monitoring.md), avsnittet *Grafana på HTTPS*.
 
 Det här ska du se, och kunna koppla till uppgiften:
 
