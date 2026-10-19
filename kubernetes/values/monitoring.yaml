@@ -101,8 +101,8 @@ grafana:
   # Grafana på https://grafana.group-1.doe25.chas-lab.dev. Vägen in:
   # wildcard-posten i dns/ pekar på workern, Traefik tar emot och skickar
   # till Grafanas Service enligt den här Ingressen. HTTPS kommer från
-  # wildcard-certet, som är Traefiks standardcert (TLSStore i
-  # kubernetes/manifests/cert-manager-issuers/), så ingen tls-sektion
+  # wildcard-certet, som är Traefiks standardcert (tlsStore i
+  # kubernetes/apps/templates/traefik.yaml), så ingen tls-sektion
   # behövs här. Byt host = ändra här och i root_url nedan.
   # Prometheus och Alertmanager får ingen ingress: de har ingen inloggning.
   ingress:
