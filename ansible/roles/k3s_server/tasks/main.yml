@@ -26,7 +26,7 @@
     INSTALL_K3S_EXEC: >-
       server {{ '--cluster-init' if inventory_hostname in groups['cp_first'] else '--server https://' ~ k3s_server_first_ip ~ ':6443' }}
       --flannel-backend=wireguard-native
-      {{ '--node-taint node-role.kubernetes.io/control-plane:NoSchedule' if k3s_taint_control_planes else '' }}
+      {{ '--node-taint node-role.kubernetes.io/control-plane:NoSchedule' if k3s_taint_control_planes | bool else '' }}
       --disable=traefik
   no_log: true
 
