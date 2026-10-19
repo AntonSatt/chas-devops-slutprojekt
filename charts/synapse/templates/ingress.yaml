@@ -1,6 +1,6 @@
 {{- if .Values.ingress.enabled }}
 # En Ingress med två hostar: API:t (Synapse) och webbklienten (Element).
-# Traefik i k3s läser den och skickar trafiken till rätt service.
+# Traefik (appen traefik i Argo CD) läser den och skickar trafiken till rätt service.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

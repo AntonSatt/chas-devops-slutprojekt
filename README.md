@@ -177,8 +177,9 @@ som kontroll.
 
 I prod har alla control planes `NoSchedule`-taint
 (`group_vars/cluster_group1.yml`), så workern är den enda nod där appar
-schemaläggs. Det kräver uppgiften. Klustrets egna komponenter, som CoreDNS
-och Traefik, tål taint och kan ändå hamna på en control plane.
+schemaläggs. Det kräver uppgiften. Klustrets egna komponenter, som CoreDNS,
+tål taint och kan ändå hamna på en control plane. Traefik installeras av
+Argo CD utan tolerations och kör därför på workern.
 
 Dev har ingen taint och normalt ingen worker, så där kör control planes
 apparna. Fungerar något i dev men blir `Pending` i prod, kör
@@ -289,6 +290,32 @@ kubectl -n argocd port-forward svc/argocd-server 8080:80
 ```
 
 Öppna http://localhost:8080 och logga in som `admin`.
+
+## Ingress och HTTPS
+
+k3s installeras med `--disable=traefik`. Traefik kommer i stället från
+appen `traefik` (`kubernetes/apps/templates/traefik.yaml`), och all dess
+konfiguration ligger där som values: IngressClass `traefik`, redirect från
+http till https och standardcertifikatet.
+
+Standardcertifikatet är ett wildcard för `*.group-1.doe25.chas-lab.dev` från
+appen `cert-manager-issuers`. cert-manager hämtar det från Let's Encrypt med
+DNS-01, via TSIG-nyckeln i `cert-manager-secrets`. Prod (`group1`) får ett
+riktigt certifikat, alla andra kluster staging, så webbläsaren varnar i dev.
+Certifikatet och Traefiks TLSStore ligger båda i namespacet `traefik`,
+eftersom TLSStore bara läser Secrets i sitt eget namespace. Namespacet
+skapas av `app_secrets`, innan apparna synkar.
+
+En Ingress som inte anger `secretName` får wildcard-certet.
+
+Testa ditt dev-kluster utan att träffa prod. Namnen pekar på prod i DNS, så
+peka om dem till din worker med `--resolve`:
+
+```bash
+H=element.group-1.doe25.chas-lab.dev; W=<din-workers-ip>
+curl -sI --resolve $H:80:$W http://$H | head -1      # 308 till https
+curl -skv --resolve $H:443:$W https://$H -o /dev/null 2>&1 | grep issuer:
+```
 
 ## Monitoring
 

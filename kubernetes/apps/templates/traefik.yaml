@@ -1,0 +1,51 @@
+# Traefik, ingress för hela klustret. k3s installeras med --disable=traefik,
+# så det här är den enda Traefik som körs.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: traefik
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://traefik.github.io/charts
+    targetRevision: 41.5.0
+    chart: traefik
+    helm:
+      # Låsta, så att ett byte av appens namn inte byter IngressClass.
+      releaseName: traefik
+      valuesObject:
+        ingressClass:
+          name: traefik
+        # All http skickas vidare till https.
+        ports:
+          web:
+            http:
+              redirections:
+                entryPoint:
+                  to: websecure
+                  scheme: https
+                  permanent: true
+        # Wildcard-certet från cert-manager-issuers, används när en Ingress
+        # inte anger egen secretName. Secreten måste ligga i samma namespace.
+        tlsStore:
+          default:
+            defaultCertificate:
+              secretName: wildcard-group-1-tls
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: traefik
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # Traefiks CRD:er är för stora för vanlig kubectl apply.
+      - ServerSideApply=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m

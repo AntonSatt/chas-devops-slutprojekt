@@ -22,7 +22,7 @@ klar.
 | Kluster: control planes och en worker | klart i dev med en worker-VM. Bare metal-workern är inte ansluten än, det görs i prod | `terraform/`, `ansible/` | 3, 4 |
 | Krypterad trafik mellan noderna | klart, WireGuard i k3s | `ansible/roles/k3s_server/` | 4 |
 | DNS: wildcard mot workern | klart | `dns/` | gemensam, rörs inte här |
-| Certifikat och HTTPS | klart: cert-manager hämtar ett wildcard-cert (staging i dev, riktigt bara i prod), Traefik skickar HTTP vidare till HTTPS | `kubernetes/apps/templates/cert-manager*.yaml`, `kubernetes/manifests/cert-manager-issuers/` | 5, 6 |
+| Certifikat och HTTPS | klart: cert-manager hämtar ett wildcard-cert med DNS-01 (staging i dev, riktigt bara i prod). Traefik är en egen Argo-app och skickar HTTP vidare till HTTPS | `kubernetes/apps/templates/traefik.yaml`, `kubernetes/apps/templates/cert-manager*.yaml`, `kubernetes/manifests/cert-manager-issuers/` | 5, 6 |
 | Continuous deployment | klart, Argo CD | `kubernetes/apps/` | 4, 7 |
 | Monitoring | klart. Grafanas ingress på HTTPS är byggd men inte testad i dev | `kubernetes/values/monitoring.yaml` | 6 |
 | Larm | klart | `kubernetes/values/monitoring.yaml`, `kubernetes/manifests/larmtest/` | 7 |
@@ -586,5 +586,5 @@ pipelinen är mergad beskriver guiden vad dess jobb gör.
 ## När en del blir klar
 
 Lägg till ett steg, eller en rad i steg 6, och uppdatera tabellen överst i
-samma MR. Loggar (!33), Sealed Secrets och pipelinen (!29) saknas per
+samma MR. Loggar, Sealed Secrets och pipelinen (!29) saknas per
 2026-10-18.
