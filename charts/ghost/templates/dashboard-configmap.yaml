@@ -1,0 +1,15 @@
+{{- if .Values.metrics.enabled }}
+# Grafana-dashboard för MySQL. Grafanas sidecar laddar ConfigMaps med
+# labeln grafana_dashboard: "1" i alla namespaces.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ghost-chart.fullname" . }}-dashboard
+  labels:
+    {{- include "ghost-chart.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+data:
+  # .Files.Get läser filen från chartens files-mapp in som text
+  ghost-mysql.json: |-
+    {{- .Files.Get "files/dashboard.json" | nindent 4 }}
+{{- end }}

@@ -1,0 +1,94 @@
+# Antal Ghost-poddar. 1 eftersom Ghosts innehållsdisk är RWO
+# och bara kan kopplas till en pod åt gången.
+replicaCount: 1
+
+image:
+  repository: ghost
+  pullPolicy: IfNotPresent
+  # tom = Chart.yaml appVersion används
+  tag: ""
+
+ghost:
+  # adressen Ghost använder i länkar, sätts till domänen när Ingress är på
+  url: http://ghost.localhost:8080
+  persistence:
+    # disk för bilder och terman i /var/lib/ghost/content, Ghosts innehållsdisk
+    size: 2Gi
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+podSecurityContext: {}
+securityContext: {}
+
+service:
+  type: ClusterIP
+  # Ghosts port
+  port: 2368
+
+ingress:
+  # PÅ: släpp in trafik utifrån via Traefik
+  enabled: true
+  # klustrets ingress-controller
+  className: "traefik"
+  annotations: {}
+  hosts:
+    # dom'n bloggen nås på, i k3d ghost.localhost
+    - host: ghost.localhost
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+
+resources: {}
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+  #första starten bygger databasen, så Ghost får tid innan den kontrolleras
+  initialDelaySeconds: 60
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 30
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# MySQL, databasen som Ghost sparar inlägg och användare i
+mysql:
+  image:
+    repository: mysql
+    # fast version, aldrig latest, så ett nybygge blir likadant
+    tag: "8.4"
+  # databasnamn och användare som Ghost loggar in med
+  database: ghost
+  user: ghost
+  # namnet på Secreten med lösenorden, skapas utanför git
+  existingSecret: ghost-mysql
+  persistence:
+    # diskstorlek för databasen
+    size: 5Gi
+
+
+metrics:
+  enabled: true
+  image:
+    repository: prom/mysqld-exporter
+    tag: "v0.17.2"
+  # skapar en ServiceMonitor så att Prometheus hittar /metrics.
+  # Kräver Prometheus Operator i klustret, finns i prod men inte i k3d.
+  serviceMonitor:
+    enabled: true

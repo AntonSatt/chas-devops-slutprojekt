@@ -1,0 +1,11 @@
+# apiVersion v2 = Helm 3-format
+apiVersion: v2
+# namnet på charten
+name: ghost-chart
+# kort beskrivning av vad charten installerar
+description: Helm chart for Ghost blog with MySQL, metrics exporter and monitoring
+type: application
+# version på själva charten
+version: 0.1.0
+# version av Ghost som körs, används som image-tagg när values.yaml inte anger någon
+appVersion: "6.71.0"

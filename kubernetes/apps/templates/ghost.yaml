@@ -1,0 +1,33 @@
+# Ghost med MySQL, chart i charts/ghost.
+# Klustrets värden (hostnamn) ligger i kubernetes/values/ghost.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ghost
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.repoURL }}
+    targetRevision: {{ .Values.revision }}
+    path: charts/ghost
+    helm:
+      valueFiles:
+        - ../../kubernetes/values/ghost.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ghost
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # ServiceMonitor kommer från monitoring och kan saknas vid första synken
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m
