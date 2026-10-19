@@ -187,14 +187,17 @@ grep -q '^export K3S_TOKEN=' .envrc || echo "export K3S_TOKEN=$(openssl rand -he
 grep -q '^export GRAFANA_ADMIN_PASSWORD=' .envrc || echo "export GRAFANA_ADMIN_PASSWORD=$(openssl rand -hex 16)" >> .envrc
 grep -q '^export SYNAPSE_POSTGRES_PASSWORD=' .envrc || echo "export SYNAPSE_POSTGRES_PASSWORD=$(openssl rand -hex 16)" >> .envrc
 grep -q '^export SYNAPSE_REGISTRATION_SHARED_SECRET=' .envrc || echo "export SYNAPSE_REGISTRATION_SHARED_SECRET=$(openssl rand -hex 32)" >> .envrc
+grep -q '^export GHOST_MYSQL_ROOT_PASSWORD=' .envrc || echo "export GHOST_MYSQL_ROOT_PASSWORD=$(openssl rand -hex 16)" >> .envrc
+grep -q '^export GHOST_MYSQL_PASSWORD=' .envrc || echo "export GHOST_MYSQL_PASSWORD=$(openssl rand -hex 16)" >> .envrc
+grep -q '^export GHOST_MYSQL_EXPORTER_PASSWORD=' .envrc || echo "export GHOST_MYSQL_EXPORTER_PASSWORD=$(openssl rand -hex 16)" >> .envrc
 chmod 600 .envrc
 direnv allow
 ```
 
 Byt aldrig de här värdena på ett kluster som redan finns. En ny `K3S_TOKEN`
-gör att noderna inte kan ansluta, och ett nytt Postgres-lösenord gör att
-Synapse inte kommer in i sin databas, eftersom lösenordet bara sätts när
-databasen skapas. Behöver du nya värden, riv klustret först. Ditt kluster
+gör att noderna inte kan ansluta, och ett nytt databaslösenord gör att
+Synapse (Postgres) eller Ghost (MySQL) inte kommer in i sin databas,
+eftersom lösenorden bara sätts när databasen skapas. Behöver du nya värden, riv klustret först. Ditt kluster
 har sina egna värden, prods ligger i CI-variablerna.
 
 Utan direnv: hoppa över `direnv allow` och kör `source .envrc` från repots
@@ -208,7 +211,8 @@ Kontrollera att allt är satt, utan att skriva ut värdena:
 for v in HCLOUD_TOKEN GITLAB_ACCESS_TOKEN GITLAB_USER_NAME \
   TF_VAR_cluster_name TF_VAR_admin_cidr K3S_TOKEN \
   ARGOCD_REPO_USER ARGOCD_REPO_TOKEN MATTERMOST_WEBHOOK_URL TF_VAR_tsig_secret \
-  GRAFANA_ADMIN_PASSWORD SYNAPSE_POSTGRES_PASSWORD SYNAPSE_REGISTRATION_SHARED_SECRET; do
+  GRAFANA_ADMIN_PASSWORD SYNAPSE_POSTGRES_PASSWORD SYNAPSE_REGISTRATION_SHARED_SECRET \
+  GHOST_MYSQL_ROOT_PASSWORD GHOST_MYSQL_PASSWORD GHOST_MYSQL_EXPORTER_PASSWORD; do
   val=$(printenv "$v")
   if [ -n "$val" ] && [ "$val" != "..." ]; then echo "ok      $v"; else echo "SAKNAS  $v"; fi
 done
