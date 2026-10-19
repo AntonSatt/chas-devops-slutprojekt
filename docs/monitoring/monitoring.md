@@ -111,14 +111,15 @@ flowchart LR
 | Del | Gör | Var |
 |---|---|---|
 | DNS | `*.group-1.doe25.chas-lab.dev` pekar på workern | `dns/` |
-| Traefik | k3s inbyggda ingress controller, tar emot på 80 och 443 och skickar 80 vidare till 443 | k3s, `traefik-redirect.yaml` |
-| Certet | cert-manager hämtar wildcard-certet från Let's Encrypt, Traefik använder det för alla hostar | `kubernetes/manifests/cert-manager-issuers/` |
+| Traefik | ingress controllern, en egen Argo-app. Tar emot på 80 och 443 och skickar 80 vidare till 443 | `kubernetes/apps/templates/traefik.yaml` |
+| Certet | cert-manager hämtar wildcard-certet från Let's Encrypt till namespacet `traefik`, Traefik använder det för alla hostar | `kubernetes/manifests/cert-manager-issuers/`, `tlsStore` i `traefik.yaml` |
 | Ingress | regeln "host grafana.group-1... går till Service `monitoring-grafana` port 80" | `grafana.ingress` i `kubernetes/values/monitoring.yaml` |
 | `root_url` | adressen Grafana själv bygger länkar med | `grafana.grafana.ini` i samma fil |
 
 Ingressen har ingen `tls`-sektion. Traefik har wildcard-certet som
 standardcert, så varje host under `group-1` får HTTPS utan att appen gör
-något.
+något. Hur Traefik och certet hänger ihop står i README, avsnittet
+*Ingress och HTTPS*.
 
 Bara Grafana får en ingress, eftersom den har inloggning. Prometheus och
 Alertmanager saknar inloggning, så den som når dem kan läsa allt och tysta
@@ -191,4 +192,4 @@ Let's Encrypts staging, så där är en certvarning väntad.
 - *Grafana svarar inte på sin adress. Var börjar du?* Följ vägen in:
   `kubectl -n monitoring get ingress` (finns regeln?), `get svc` och
   `get pods` (finns något bakom?), sedan certet med
-  `kubectl -n kube-system get certificate`.
+  `kubectl -n traefik get certificate`.
