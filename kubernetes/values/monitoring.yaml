@@ -98,6 +98,23 @@ grafana:
     # Skapas av Ansible från GRAFANA_ADMIN_PASSWORD. Chartens eget slumpade
     # lösenord fungerar inte med Argo CD: det slumpas om vid varje synk.
     existingSecret: grafana-admin
+  # Grafana på https://grafana.group-1.doe25.chas-lab.dev. Vägen in:
+  # wildcard-posten i dns/ pekar på workern, Traefik tar emot och skickar
+  # till Grafanas Service enligt den här Ingressen. HTTPS kommer från
+  # wildcard-certet, som är Traefiks standardcert (tlsStore i
+  # kubernetes/apps/templates/traefik.yaml), så ingen tls-sektion
+  # behövs här. Byt host = ändra här och i root_url nedan.
+  # Prometheus och Alertmanager får ingen ingress: de har ingen inloggning.
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    hosts:
+      - grafana.group-1.doe25.chas-lab.dev
+  grafana.ini:
+    server:
+      # Adressen Grafana bygger länkar med, t.ex. i larm och efter
+      # inloggning. Utan den tror Grafana att den ligger på localhost.
+      root_url: https://grafana.group-1.doe25.chas-lab.dev
   persistence:
     enabled: true
     size: 2Gi

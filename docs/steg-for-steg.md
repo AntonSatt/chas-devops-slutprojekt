@@ -11,7 +11,7 @@ delarna och ändringar görs via commit, så alla behöver ha sett hela kedjan.
 Varför sakerna är byggda som de är står i README och i `docs/`. Guiden
 länkar dit i stället för att upprepa det.
 
-## Läget per 2026-10-11
+## Läget per 2026-10-19
 
 *Klart* betyder byggt och testat i ett dev-kluster. Inget är byggt i prod
 än, det väntar på pipelinen. Uppdatera tabellen i samma MR som en del blir
@@ -22,14 +22,15 @@ klar.
 | Kluster: control planes och en worker | klart i dev med en worker-VM. Bare metal-workern är inte ansluten än, det görs i prod | `terraform/`, `ansible/` | 3, 4 |
 | Krypterad trafik mellan noderna | klart, WireGuard i k3s | `ansible/roles/k3s_server/` | 4 |
 | DNS: wildcard mot workern | klart | `dns/` | gemensam, rörs inte här |
-| Certifikat och HTTPS | klart, wildcard via cert-manager (DNS-01), Traefik som Argo-app | `kubernetes/apps/templates/traefik.yaml`, `kubernetes/manifests/cert-manager-issuers/` | |
+| Certifikat och HTTPS | klart: cert-manager hämtar ett wildcard-cert med DNS-01 (staging i dev, riktigt bara i prod). Traefik är en egen Argo-app och skickar HTTP vidare till HTTPS | `kubernetes/apps/templates/traefik.yaml`, `kubernetes/apps/templates/cert-manager*.yaml`, `kubernetes/manifests/cert-manager-issuers/` | 5, 6 |
 | Continuous deployment | klart, Argo CD | `kubernetes/apps/` | 4, 7 |
-| Monitoring | klart | `kubernetes/values/monitoring.yaml` | 6 |
+| Monitoring | klart. Grafanas ingress på HTTPS är byggd men inte testad i dev | `kubernetes/values/monitoring.yaml` | 6 |
 | Larm | klart | `kubernetes/values/monitoring.yaml`, `kubernetes/manifests/larmtest/` | 7 |
-| Loggar | saknas | | |
+| Loggar | klart: Loki och Alloy, poddloggar och journald från alla noder | `kubernetes/values/loki.yaml`, `kubernetes/values/alloy.yaml`, `docs/loggar/` | 5, 6 |
 | Secrets | delvis: CI-variabler som Ansible gör till Secrets, Sealed Secrets planerat | `ansible/roles/app_secrets/` | 2, 4 |
-| Pipeline | saknas, ingen `.gitlab-ci.yml` | | |
+| Pipeline | i draft-MR !29, bygger ett helt kluster i en MR men är inte mergad | | |
 | Synapse, individuell del | klart | `charts/synapse/` | 6 |
+| Ghost, individuell del | testad i k3d, inte i ett dev-kluster | `charts/ghost/` | 5, 6 |
 
 ## Översikt
 
@@ -38,7 +39,7 @@ flowchart LR
   E[".envrc"] --> T["Terraform: servrar och brandvägg"]
   T --> A["Ansible: k3s, secrets, Argo CD"]
   A --> R["Argo CD: allt annat från git"]
-  R --> X["monitoring, larm, synapse"]
+  R --> X["traefik, cert-manager, monitoring, larm, loggar, synapse"]
 ```
 
 | Steg | Verktyg | Vad som händer | I prod, när pipelinen finns |
@@ -187,14 +188,17 @@ grep -q '^export K3S_TOKEN=' .envrc || echo "export K3S_TOKEN=$(openssl rand -he
 grep -q '^export GRAFANA_ADMIN_PASSWORD=' .envrc || echo "export GRAFANA_ADMIN_PASSWORD=$(openssl rand -hex 16)" >> .envrc
 grep -q '^export SYNAPSE_POSTGRES_PASSWORD=' .envrc || echo "export SYNAPSE_POSTGRES_PASSWORD=$(openssl rand -hex 16)" >> .envrc
 grep -q '^export SYNAPSE_REGISTRATION_SHARED_SECRET=' .envrc || echo "export SYNAPSE_REGISTRATION_SHARED_SECRET=$(openssl rand -hex 32)" >> .envrc
+grep -q '^export GHOST_MYSQL_ROOT_PASSWORD=' .envrc || echo "export GHOST_MYSQL_ROOT_PASSWORD=$(openssl rand -hex 16)" >> .envrc
+grep -q '^export GHOST_MYSQL_PASSWORD=' .envrc || echo "export GHOST_MYSQL_PASSWORD=$(openssl rand -hex 16)" >> .envrc
+grep -q '^export GHOST_MYSQL_EXPORTER_PASSWORD=' .envrc || echo "export GHOST_MYSQL_EXPORTER_PASSWORD=$(openssl rand -hex 16)" >> .envrc
 chmod 600 .envrc
 direnv allow
 ```
 
 Byt aldrig de här värdena på ett kluster som redan finns. En ny `K3S_TOKEN`
-gör att noderna inte kan ansluta, och ett nytt Postgres-lösenord gör att
-Synapse inte kommer in i sin databas, eftersom lösenordet bara sätts när
-databasen skapas. Behöver du nya värden, riv klustret först. Ditt kluster
+gör att noderna inte kan ansluta, och ett nytt databaslösenord gör att
+Synapse (Postgres) eller Ghost (MySQL) inte kommer in i sin databas,
+eftersom lösenorden bara sätts när databasen skapas. Behöver du nya värden, riv klustret först. Ditt kluster
 har sina egna värden, prods ligger i CI-variablerna.
 
 Utan direnv: hoppa över `direnv allow` och kör `source .envrc` från repots
@@ -207,8 +211,9 @@ Kontrollera att allt är satt, utan att skriva ut värdena:
 ```bash
 for v in HCLOUD_TOKEN GITLAB_ACCESS_TOKEN GITLAB_USER_NAME \
   TF_VAR_cluster_name TF_VAR_admin_cidr K3S_TOKEN \
-  ARGOCD_REPO_USER ARGOCD_REPO_TOKEN MATTERMOST_WEBHOOK_URL \
-  GRAFANA_ADMIN_PASSWORD SYNAPSE_POSTGRES_PASSWORD SYNAPSE_REGISTRATION_SHARED_SECRET; do
+  ARGOCD_REPO_USER ARGOCD_REPO_TOKEN MATTERMOST_WEBHOOK_URL TF_VAR_tsig_secret \
+  GRAFANA_ADMIN_PASSWORD SYNAPSE_POSTGRES_PASSWORD SYNAPSE_REGISTRATION_SHARED_SECRET \
+  GHOST_MYSQL_ROOT_PASSWORD GHOST_MYSQL_PASSWORD GHOST_MYSQL_EXPORTER_PASSWORD; do
   val=$(printenv "$v")
   if [ -n "$val" ] && [ "$val" != "..." ]; then echo "ok      $v"; else echo "SAKNAS  $v"; fi
 done
@@ -218,6 +223,11 @@ unset val
 `SAKNAS` betyder att variabeln inte är satt, är tom eller fortfarande har
 `...` från mallen. Som Developer blir de två `GITLAB_`-raderna `SAKNAS`, det
 är väntat.
+
+Developer som inte har fått `TF_VAR_tsig_secret`: ett påhittat värde tar
+dig förbi kontrollen i `app_secrets`, och allt utom certet kommer upp. Utan
+den riktiga nyckeln får cert-manager inte skriva i DNS, så certet blir
+aldrig klart.
 
 Gå in i `ansible/` och kör loopen igen. Svaret ska bli detsamma. Blir
 nästan allt `SAKNAS` där men inte i roten har du en gammal `ansible/.envrc`
@@ -297,8 +307,15 @@ skriver den ut `cp_ips`, control planens adress.
 Efter play 5 tar Argo CD över, och allt annat kommer från git. Ansible
 körs alltid från `ansible/`, annars läses inte `ansible.cfg`.
 
+`ansible.cfg` säger att lösenordet till ansible-vault ligger i
+`ansible/.vault_pass`, och utan den filen stannar varje körning. Bara
+runnerns variabler (`group_vars/runners.yml`) är krypterade, så `site.yml`
+behöver inte det riktiga lösenordet, bara att filen finns. Filen är
+gitignorerad, och raden skriver inte över en fil som redan finns:
+
 ```bash
 cd ansible
+[ -f .vault_pass ] || echo dummy > .vault_pass
 ansible-galaxy collection install -r requirements.yml -p collections --force
 ansible-playbook site.yml -e cluster="$TF_VAR_cluster_name" --list-hosts
 cd ..
@@ -328,6 +345,7 @@ Argo CD om?
 
 | Felet | Orsak |
 |---|---|
+| `The vault password file ... was not found` | `.vault_pass` saknas i `ansible/`, se början av steg 4 |
 | `'cluster' is undefined` | `-e cluster=...` saknas. Skyddet är med flit, se README |
 | `... saknas i miljön` | en variabel saknas, kör kontrollen i steg 2 |
 | `hosts (0)` i `--list-hosts` | `.envrc` är inte laddad i `ansible/`, eller servrarna finns inte. Kör kontrollen i steg 2 från `ansible/` |
@@ -353,17 +371,33 @@ kubectl get pods -A -o wide
 ```
 
 Titta i kolumnen `NODE`: apparna ligger på workern. På control planen finns
-bara det som tål taint, som k3s egna poddar och node-exporter.
+bara det som tål taint, som k3s egna poddar, node-exporter och Alloy.
 
 ```bash
 kubectl -n argocd get applications
 ```
 
 Efter några minuter ska alla vara `Synced` och `Healthy`: `root`,
-`monitoring`, `larmtest` och `synapse`. Första gången tar det längre, när
-alla images laddas ner, och `Progressing` en stund är normalt. Står en app
-kvar i `OutOfSync` eller `Degraded`, öppna den i Argo CD:s UI (steg 6) och
-läs felet.
+`traefik`, `cert-manager`, `cert-manager-issuers`, `monitoring`,
+`larmtest`, `loki`, `alloy`, `loggar`, `synapse` och `ghost`. Första
+gången tar det längre, när alla images laddas ner, och `Progressing` en
+stund är normalt. Står en app kvar i `OutOfSync` eller
+`Degraded`, öppna den i Argo CD:s UI (steg 6) och läs felet.
+
+Certet:
+
+```bash
+kubectl -n traefik get certificate
+```
+
+`wildcard-group-1` ska bli `READY True` inom några minuter. cert-manager
+bevisar för Let's Encrypt att vi äger domänen genom att skriva en TXT-post
+i DNS (DNS-01), därför behövs TSIG-nyckeln. Ditt kluster får ett cert från
+Let's Encrypts staging, bara `group1` får ett riktigt. Certet ligger i
+namespacet `traefik`, eftersom Traefik bara läser certet från sitt eget
+namespace. Fastnar det på `False`, läs varför med `kubectl -n traefik
+describe certificate wildcard-group-1` och följ kedjan nedåt med
+`kubectl get certificaterequest,order,challenge -A`.
 
 Använder du direnv kan du lägga `KUBECONFIG`-raden sist i `.envrc`, så
 slipper du skriva den i varje terminal. direnv läser filen från roten, så
@@ -389,6 +423,35 @@ Argo CD:s lösenord:
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo
 ```
 
+### HTTPS i ditt kluster
+
+I prod nås Grafana på https://grafana.group-1.doe25.chas-lab.dev, Synapse
+på https://matrix.group-1.doe25.chas-lab.dev och Ghost på
+https://ghost.group-1.doe25.chas-lab.dev. Ditt kluster har
+samma ingresser, men DNS pekar på prod. `curl --resolve` låter dig välja
+adressen själv och skicka samma hostnamn till din worker:
+
+```bash
+WORKER_IP=$(kubectl get node "$TF_VAR_cluster_name-node-worker-0" -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
+GRAFANA_HOST=grafana.group-1.doe25.chas-lab.dev
+curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' --resolve "$GRAFANA_HOST:80:$WORKER_IP" "http://$GRAFANA_HOST"
+curl -sk -o /dev/null -w '%{http_code}\n' --resolve "$GRAFANA_HOST:443:$WORKER_IP" "https://$GRAFANA_HOST/login"
+openssl s_client -connect "$WORKER_IP:443" -servername "$GRAFANA_HOST" </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer
+```
+
+| Rad | Ska visa | Bevisar |
+|---|---|---|
+| första `curl` | `308` och en `https://`-adress | HTTP skickas vidare till HTTPS |
+| andra `curl` | `200` | Ingressen hittar Grafana. `-k` för att dev-certet är från staging |
+| `openssl` | subject `*.group-1.doe25.chas-lab.dev`, issuer med `STAGING` | Traefik använder wildcard-certet |
+
+I prod är issuern Let's Encrypt utan `STAGING`, och då behövs inte `-k`.
+Byt `GRAFANA_HOST` mot Ghosts host och testa den på samma sätt, med `/`
+i stället för `/login`.
+Hur Traefik och certet hänger ihop: README, avsnittet *Ingress och HTTPS*.
+Hela vägen in till Grafana, och varför bara Grafana får en ingress:
+[monitoring.md](monitoring/monitoring.md), avsnittet *Grafana på HTTPS*.
+
 Det här ska du se, och kunna koppla till uppgiften:
 
 - **Argo CD:** klicka på `root`. Alla appar hänger under den, det är app of
@@ -397,6 +460,9 @@ Det här ska du se, och kunna koppla till uppgiften:
   även node-exporter på control planen (port 9100 i brandväggen).
 - **Grafana:** under *Dashboards* finns både noderna (infrastruktur) och
   poddarna (workloads). Uppgiften kräver båda.
+- **Loggar:** i Grafana under *Explore*, välj datasourcen `Loki`.
+  `{namespace="synapse"}` ger Synapses poddloggar, `{job="journal"}`
+  nodernas journald. Mer i [loggar.md](loggar/loggar.md).
 
 **Synapse:** skapa en användare och prova API:t medan port-forwarden kör.
 `-a` gör användaren till admin:
@@ -528,12 +594,11 @@ det som bara finns där: tre control planes och bare metal-workern från
 CI-variablerna i stället för din `.envrc`, när en MR mergas till `main`.
 Steg 5 till 7 är desamma.
 
-Pipelinen finns inte än. Kör aldrig steg 3 eller 4 mot prod från din dator,
-se *Regler* i README. När pipelinen finns beskriver guiden vad dess jobb
-gör, och tabellen överst får en rad för den.
+Pipelinen ligger i draft-MR !29 per 2026-10-18 och är inte mergad. Kör
+aldrig steg 3 eller 4 mot prod från din dator, se *Regler* i README. När
+pipelinen är mergad beskriver guiden vad dess jobb gör.
 
 ## När en del blir klar
 
 Lägg till ett steg, eller en rad i steg 6, och uppdatera tabellen överst i
-samma MR. Loggar, Sealed Secrets och pipelinen
-saknas per 2026-10-18.
+samma MR. Sealed Secrets och pipelinen (!29) saknas per 2026-10-19.
