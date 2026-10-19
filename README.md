@@ -317,7 +317,7 @@ peka om dem till din worker med `--resolve`:
 
 ```bash
 H=element.group-1.doe25.chas-lab.dev; W=<din-workers-ip>
-curl -sI --resolve $H:80:$W http://$H | head -1      # 308 till https
+curl -sI --resolve $H:80:$W http://$H | head -1      # 301 till https
 curl -skv --resolve $H:443:$W https://$H -o /dev/null 2>&1 | grep issuer:
 ```
 
