@@ -9,6 +9,10 @@ Ny i projektet, eller vill du förstå hur allt hänger ihop? Bygg ett eget
 kluster från noll med [steg-för-steg-guiden](docs/steg-for-steg.md). Den
 visar också vilka delar som är klara.
 
+Ska du titta på, felsöka eller ändra det körande prod-klustret: se
+[drift](docs/drift.md). Där finns hur du kommer åt prod, en hälsokoll,
+var varje del ändras och felsökning steg för steg.
+
 ## Arbetssätt
 
 - `main` är skyddad, allt går via merge request.
@@ -46,9 +50,8 @@ Skicka aldrig värden i klartext i en kanal.
 
 Terraform-state ligger i GitLab (*Operate > Terraform states*), inte i en fil
 på någons laptop. Var och en har en egen state och ett eget kluster, med sitt
-namn som prefix på alla resurser. Den delade staten
-`grupprojekt-terraform-state` är prod (`cluster_name = group1`) och ändras
-bara via merge request.
+namn som prefix på alla resurser. Staten `group1` är prod
+(`cluster_name = group1`) och ändras bara av pipelinen, via merge request.
 
 Ska du bara köra Ansible behöver du inget av detta, se *Ansible* nedan.
 
@@ -115,7 +118,7 @@ står du på fel state: kör inte `apply`.
   från vilken gren som helst. Det påverkar bara servrar med ditt namn.
 - **Riv innan du slutar för dagen** med `terraform destroy`. Servrarna kostar
   per timme och spelreglerna kräver det.
-- **Kör aldrig `setup.sh grupprojekt-terraform-state`.** Prod ändras via
+- **Kör aldrig `setup.sh group1`.** Prod ändras via
   merge request, inte från någons dator. Ett `destroy` där river gruppens
   kluster.
 - **Säger `plan` att state är låst** kör du redan Terraform i ett annat
