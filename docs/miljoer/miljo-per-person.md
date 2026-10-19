@@ -40,7 +40,7 @@ verkligheten lik koden, och tar bort det som finns i staten men inte i koden.
 
 Delar två personer en state och jobbar i olika grenar, river den enas
 `apply` det som bara finns i den andras gren. Därför har var och en en egen
-state. Den delade staten, `grupprojekt-terraform-state`, är prod och ändras
+state. Den delade staten, `group1`, är prod och ändras
 bara via merge request.
 
 ### Prefix, eftersom state inte skiljer resurser åt
