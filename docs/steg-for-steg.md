@@ -13,9 +13,10 @@ länkar dit i stället för att upprepa det.
 
 ## Läget per 2026-10-19
 
-*Klart* betyder byggt och testat i ett dev-kluster. Inget är byggt i prod
-än, det väntar på pipelinen. Uppdatera tabellen i samma MR som en del blir
-klar.
+*Klart* betyder byggt och testat i ett dev-kluster. Prod byggs av
+pipelinen vid varje merge till `main` sedan 2026-10-19. Att titta på och
+felsöka prod: [drift.md](drift.md). Uppdatera tabellen i samma MR som en
+del blir klar.
 
 | Del | Läge | Var i repot | Steg |
 |---|---|---|---|
@@ -28,9 +29,9 @@ klar.
 | Larm | klart | `kubernetes/values/monitoring.yaml`, `kubernetes/manifests/larmtest/` | 7 |
 | Loggar | klart: Loki och Alloy, poddloggar och journald från alla noder | `kubernetes/values/loki.yaml`, `kubernetes/values/alloy.yaml`, `docs/loggar/` | 5, 6 |
 | Secrets | delvis: CI-variabler som Ansible gör till Secrets, Sealed Secrets planerat | `ansible/roles/app_secrets/` | 2, 4 |
-| Pipeline | i draft-MR !29, bygger ett helt kluster i en MR men är inte mergad | | |
+| Pipeline | klart: bygger prod från `main` | `.gitlab-ci.yml` | se *Från dev till prod* |
 | Synapse, individuell del | klart | `charts/synapse/` | 6 |
-| Ghost, individuell del | testad i k3d, inte i ett dev-kluster | `charts/ghost/` | 5, 6 |
+| Ghost, individuell del | i prod, men kraschar per 2026-10-19 (se [drift.md](drift.md), *Felsökning*) | `charts/ghost/` | 5, 6 |
 
 ## Översikt
 
@@ -441,7 +442,7 @@ openssl s_client -connect "$WORKER_IP:443" -servername "$GRAFANA_HOST" </dev/nul
 
 | Rad | Ska visa | Bevisar |
 |---|---|---|
-| första `curl` | `308` och en `https://`-adress | HTTP skickas vidare till HTTPS |
+| första `curl` | `301` och en `https://`-adress | HTTP skickas vidare till HTTPS |
 | andra `curl` | `200` | Ingressen hittar Grafana. `-k` för att dev-certet är från staging |
 | `openssl` | subject `*.group-1.doe25.chas-lab.dev`, issuer med `STAGING` | Traefik använder wildcard-certet |
 
@@ -590,15 +591,23 @@ Nästa gång börjar du på steg 3. `.envrc` och nyckeln finns kvar.
 
 Prod är samma kod med `cluster_name = group1` och `-e cluster=group1`, plus
 det som bara finns där: tre control planes och bare metal-workern från
-`ansible/inventory/worker.ini`. Pipelinen ska göra steg 3 och 4 med
-CI-variablerna i stället för din `.envrc`, när en MR mergas till `main`.
-Steg 5 till 7 är desamma.
+`ansible/inventory/worker.ini`. Pipelinen gör steg 3 och 4 med
+CI-variablerna i stället för din `.envrc`, vid varje merge till `main`.
+Steg 5 till 7 är desamma, se [drift.md](drift.md).
 
-Pipelinen ligger i draft-MR !29 per 2026-10-18 och är inte mergad. Kör
-aldrig steg 3 eller 4 mot prod från din dator, se *Regler* i README. När
-pipelinen är mergad beskriver guiden vad dess jobb gör.
+| Jobb | Gör | Motsvarar |
+|---|---|---|
+| `build-util-image` | bygger imagen med Terraform, Ansible och verktygen, bara när `ci/util.Dockerfile` eller `.gitlab-ci.yml` ändras | steg 0 |
+| `terraform-validate` | kontrollerar Terraform-koden | |
+| `terraform-deploy` | `terraform apply` mot staten `group1` | steg 3 |
+| `ansible-deploy` | `site.yml -e cluster=group1` med taint på control planes | steg 4 |
+| `terraform-destroy` | manuell, finns inte för `group1` | steg 8 |
+
+En MR från en gren med `pipeline` i namnet bygger ett eget kluster,
+`mr` plus MR-numret, som rivs med `terraform-destroy`. Kör aldrig steg 3
+eller 4 mot prod från din dator, se *Regler* i README.
 
 ## När en del blir klar
 
 Lägg till ett steg, eller en rad i steg 6, och uppdatera tabellen överst i
-samma MR. Sealed Secrets och pipelinen (!29) saknas per 2026-10-19.
+samma MR. Sealed Secrets saknas per 2026-10-19.
