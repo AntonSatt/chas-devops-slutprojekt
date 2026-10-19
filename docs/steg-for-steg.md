@@ -30,6 +30,7 @@ klar.
 | Secrets | delvis: CI-variabler som Ansible gör till Secrets, Sealed Secrets planerat | `ansible/roles/app_secrets/` | 2, 4 |
 | Pipeline | i draft-MR !29, bygger ett helt kluster i en MR men är inte mergad | | |
 | Synapse, individuell del | klart | `charts/synapse/` | 6 |
+| Ghost, individuell del | testad i k3d, inte i ett dev-kluster | `charts/ghost/` | 5, 6 |
 
 ## Översikt
 
@@ -378,8 +379,9 @@ kubectl -n argocd get applications
 
 Efter några minuter ska alla vara `Synced` och `Healthy`: `root`,
 `traefik`, `cert-manager`, `cert-manager-issuers`, `monitoring`,
-`larmtest`, `loki`, `alloy`, `loggar` och `synapse`. Första gången tar det längre, när alla images laddas ner, och
-`Progressing` en stund är normalt. Står en app kvar i `OutOfSync` eller
+`larmtest`, `loki`, `alloy`, `loggar`, `synapse` och `ghost`. Första
+gången tar det längre, när alla images laddas ner, och `Progressing` en
+stund är normalt. Står en app kvar i `OutOfSync` eller
 `Degraded`, öppna den i Argo CD:s UI (steg 6) och läs felet.
 
 Certet:
@@ -423,8 +425,9 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.pas
 
 ### HTTPS i ditt kluster
 
-I prod nås Grafana på https://grafana.group-1.doe25.chas-lab.dev och
-Synapse på https://matrix.group-1.doe25.chas-lab.dev. Ditt kluster har
+I prod nås Grafana på https://grafana.group-1.doe25.chas-lab.dev, Synapse
+på https://matrix.group-1.doe25.chas-lab.dev och Ghost på
+https://ghost.group-1.doe25.chas-lab.dev. Ditt kluster har
 samma ingresser, men DNS pekar på prod. `curl --resolve` låter dig välja
 adressen själv och skicka samma hostnamn till din worker:
 
@@ -443,6 +446,8 @@ openssl s_client -connect "$WORKER_IP:443" -servername "$GRAFANA_HOST" </dev/nul
 | `openssl` | subject `*.group-1.doe25.chas-lab.dev`, issuer med `STAGING` | Traefik använder wildcard-certet |
 
 I prod är issuern Let's Encrypt utan `STAGING`, och då behövs inte `-k`.
+Byt `GRAFANA_HOST` mot Ghosts host och testa den på samma sätt, med `/`
+i stället för `/login`.
 Hur Traefik och certet hänger ihop: README, avsnittet *Ingress och HTTPS*.
 Hela vägen in till Grafana, och varför bara Grafana får en ingress:
 [monitoring.md](monitoring/monitoring.md), avsnittet *Grafana på HTTPS*.
