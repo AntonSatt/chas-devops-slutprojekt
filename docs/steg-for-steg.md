@@ -11,7 +11,7 @@ delarna och ändringar görs via commit, så alla behöver ha sett hela kedjan.
 Varför sakerna är byggda som de är står i README och i `docs/`. Guiden
 länkar dit i stället för att upprepa det.
 
-## Läget per 2026-10-18
+## Läget per 2026-10-19
 
 *Klart* betyder byggt och testat i ett dev-kluster. Inget är byggt i prod
 än, det väntar på pipelinen. Uppdatera tabellen i samma MR som en del blir
@@ -26,7 +26,7 @@ klar.
 | Continuous deployment | klart, Argo CD | `kubernetes/apps/` | 4, 7 |
 | Monitoring | klart. Grafanas ingress på HTTPS är byggd men inte testad i dev | `kubernetes/values/monitoring.yaml` | 6 |
 | Larm | klart | `kubernetes/values/monitoring.yaml`, `kubernetes/manifests/larmtest/` | 7 |
-| Loggar | i MR !33, inte mergad | | |
+| Loggar | klart: Loki och Alloy, poddloggar och journald från alla noder | `kubernetes/values/loki.yaml`, `kubernetes/values/alloy.yaml`, `docs/loggar/` | 5, 6 |
 | Secrets | delvis: CI-variabler som Ansible gör till Secrets, Sealed Secrets planerat | `ansible/roles/app_secrets/` | 2, 4 |
 | Pipeline | i draft-MR !29, bygger ett helt kluster i en MR men är inte mergad | | |
 | Synapse, individuell del | klart | `charts/synapse/` | 6 |
@@ -38,7 +38,7 @@ flowchart LR
   E[".envrc"] --> T["Terraform: servrar och brandvägg"]
   T --> A["Ansible: k3s, secrets, Argo CD"]
   A --> R["Argo CD: allt annat från git"]
-  R --> X["cert-manager, monitoring, larm, synapse"]
+  R --> X["traefik, cert-manager, monitoring, larm, loggar, synapse"]
 ```
 
 | Steg | Verktyg | Vad som händer | I prod, när pipelinen finns |
@@ -366,30 +366,32 @@ kubectl get pods -A -o wide
 ```
 
 Titta i kolumnen `NODE`: apparna ligger på workern. På control planen finns
-bara det som tål taint, som k3s egna poddar och node-exporter.
+bara det som tål taint, som k3s egna poddar, node-exporter och Alloy.
 
 ```bash
 kubectl -n argocd get applications
 ```
 
 Efter några minuter ska alla vara `Synced` och `Healthy`: `root`,
-`cert-manager`, `cert-manager-issuers`, `monitoring`, `larmtest` och
-`synapse`. Första gången tar det längre, när alla images laddas ner, och
+`traefik`, `cert-manager`, `cert-manager-issuers`, `monitoring`,
+`larmtest`, `loki`, `alloy`, `loggar` och `synapse`. Första gången tar det längre, när alla images laddas ner, och
 `Progressing` en stund är normalt. Står en app kvar i `OutOfSync` eller
 `Degraded`, öppna den i Argo CD:s UI (steg 6) och läs felet.
 
 Certet:
 
 ```bash
-kubectl -n kube-system get certificate
+kubectl -n traefik get certificate
 ```
 
 `wildcard-group-1` ska bli `READY True` inom några minuter. cert-manager
 bevisar för Let's Encrypt att vi äger domänen genom att skriva en TXT-post
 i DNS (DNS-01), därför behövs TSIG-nyckeln. Ditt kluster får ett cert från
-Let's Encrypts staging, bara `group1` får ett riktigt. Fastnar det på
-`False`, läs varför med `kubectl -n kube-system describe certificate
-wildcard-group-1` och följ kedjan nedåt med `get certificaterequest,order,challenge -A`.
+Let's Encrypts staging, bara `group1` får ett riktigt. Certet ligger i
+namespacet `traefik`, eftersom Traefik bara läser certet från sitt eget
+namespace. Fastnar det på `False`, läs varför med `kubectl -n traefik
+describe certificate wildcard-group-1` och följ kedjan nedåt med
+`kubectl get certificaterequest,order,challenge -A`.
 
 Använder du direnv kan du lägga `KUBECONFIG`-raden sist i `.envrc`, så
 slipper du skriva den i varje terminal. direnv läser filen från roten, så
@@ -432,12 +434,13 @@ openssl s_client -connect "$WORKER_IP:443" -servername "$GRAFANA_HOST" </dev/nul
 
 | Rad | Ska visa | Bevisar |
 |---|---|---|
-| första `curl` | `301` eller `308` och en `https://`-adress | HTTP skickas vidare till HTTPS |
+| första `curl` | `308` och en `https://`-adress | HTTP skickas vidare till HTTPS |
 | andra `curl` | `200` | Ingressen hittar Grafana. `-k` för att dev-certet är från staging |
 | `openssl` | subject `*.group-1.doe25.chas-lab.dev`, issuer med `STAGING` | Traefik använder wildcard-certet |
 
 I prod är issuern Let's Encrypt utan `STAGING`, och då behövs inte `-k`.
-Hela vägen in, och varför bara Grafana får en ingress:
+Hur Traefik och certet hänger ihop: README, avsnittet *Ingress och HTTPS*.
+Hela vägen in till Grafana, och varför bara Grafana får en ingress:
 [monitoring.md](monitoring/monitoring.md), avsnittet *Grafana på HTTPS*.
 
 Det här ska du se, och kunna koppla till uppgiften:
@@ -448,6 +451,9 @@ Det här ska du se, och kunna koppla till uppgiften:
   även node-exporter på control planen (port 9100 i brandväggen).
 - **Grafana:** under *Dashboards* finns både noderna (infrastruktur) och
   poddarna (workloads). Uppgiften kräver båda.
+- **Loggar:** i Grafana under *Explore*, välj datasourcen `Loki`.
+  `{namespace="synapse"}` ger Synapses poddloggar, `{job="journal"}`
+  nodernas journald. Mer i [loggar.md](loggar/loggar.md).
 
 **Synapse:** skapa en användare och prova API:t medan port-forwarden kör.
 `-a` gör användaren till admin:
@@ -586,5 +592,4 @@ pipelinen är mergad beskriver guiden vad dess jobb gör.
 ## När en del blir klar
 
 Lägg till ett steg, eller en rad i steg 6, och uppdatera tabellen överst i
-samma MR. Loggar, Sealed Secrets och pipelinen (!29) saknas per
-2026-10-18.
+samma MR. Sealed Secrets och pipelinen (!29) saknas per 2026-10-19.
