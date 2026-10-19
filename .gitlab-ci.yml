@@ -15,7 +15,7 @@ workflow:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH  &&  $CI_PIPELINE_SOURCE != "merge_request_event"
       variables:
         VERSION: group1
-    - if: $CI_COMMIT_REF_NAME =~ /.*pipeline.*/  &&  $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       variables:
         VERSION: mr$CI_MERGE_REQUEST_IID
     - when: always
