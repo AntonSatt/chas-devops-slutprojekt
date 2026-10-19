@@ -1,0 +1,154 @@
+
+stages:
+  - prepare
+  - validate
+  - deploy
+  - cleanup
+
+
+variables:
+  STATE_URL: https://git.chas-lab.dev/api/v4/projects/582/terraform/state
+  IMAGE_UTIL: "${CI_REGISTRY_IMAGE}/util"
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH  &&  $CI_PIPELINE_SOURCE != "merge_request_event"
+      variables:
+        VERSION: group1
+    - if: $CI_COMMIT_REF_NAME =~ /.*pipeline.*/  &&  $CI_PIPELINE_SOURCE == "merge_request_event"
+      variables:
+        VERSION: mr$CI_MERGE_REQUEST_IID
+    - when: always
+
+
+.buildkit:
+  image:
+    name: moby/buildkit:rootless
+    entrypoint: [""]
+  variables:
+    BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
+  before_script:
+    - mkdir -p ~/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > ~/.docker/config.json
+
+
+.terraform:
+  image: $IMAGE_UTIL
+  variables:
+    TF_VAR_admin_cidr: "0.0.0.0/0"
+    TF_VAR_cluster_name: "$VERSION"
+  rules:
+    - if: $VERSION
+  before_script:
+    - |
+      if [ -z "$DIR" ]; then
+        echo "DIR not set"
+        exit 1
+      fi
+
+    - cd ${DIR}
+    - pwd
+    - |
+      echo STATE_URL:  $STATE_URL
+    - terraform init -reconfigure
+        -backend-config="address=${STATE_URL}/${VERSION}"
+        -backend-config="lock_address=${STATE_URL}/${VERSION}/lock"
+        -backend-config="unlock_address=${STATE_URL}/${VERSION}/lock"
+        -backend-config="username=gitlab-ci-token"
+        -backend-config="password=${CI_JOB_TOKEN}"
+        -backend-config="lock_method=POST"
+        -backend-config="unlock_method=DELETE"
+        -backend-config="retry_wait_min=5"
+
+.ansible:
+  image: $IMAGE_UTIL
+  rules:
+    - if: $VERSION
+  before_script:
+    - cd ansible
+    - export ANSIBLE_CONFIG=$PWD/ansible.cfg # explicitly setting config, as otherwise it wont allow as the file is "world writable"
+    - echo $ANSIBLE_VAULT_PASSWORD > .vault_pass
+    - mkdir -p $HOME/.ssh
+    - cp "$GROUP1_SSH_KEY" $HOME/.ssh/group1_hetzner
+    - chmod 0600 $HOME/.ssh/group1_hetzner
+
+
+build-util-image:
+  extends: .buildkit
+  stage: prepare
+  script:
+    - buildctl-daemonless.sh build
+        --frontend dockerfile.v0
+        --local context=.
+        --local dockerfile=./ci
+        --opt filename=util.Dockerfile
+        --output type=image,push=true,name=$IMAGE_UTIL
+  rules:
+    - changes:
+      - ci/util.Dockerfile
+      - .gitlab-ci.yml
+
+
+terraform-validate:
+  extends: .terraform
+  stage: validate
+  variables:
+    DIR: terraform
+  script:
+    - terraform validate
+
+terraform-deploy:
+  extends: .terraform
+  stage: deploy
+  environment:
+    name: review/$VERSION
+    on_stop: terraform-destroy
+  needs:
+    - terraform-validate
+  variables:
+    DIR: terraform
+  script:
+    - terraform apply -auto-approve
+
+
+
+terraform-destroy:
+  stage: cleanup
+  extends: .terraform
+  variables:
+    DIR: terraform
+  environment:
+    name: review/$VERSION
+    action: stop
+  needs:
+    - terraform-deploy
+    - ansible-deploy
+  rules:
+    - if: $VERSION && $VERSION && $VERSION != "group1"
+      when: manual
+  script:
+    - terraform destroy -auto-approve
+    - |
+      curl "${STATE_URL}/${VERSION}" --request DELETE --header "Authorization: Bearer $CI_JOB_TOKEN"
+  
+
+
+ansible-deploy:
+  extends: .ansible
+  stage: deploy
+  needs:
+    - terraform-deploy
+  script:
+    - echo "deploying to cluster=$VERSION"
+    - ansible-galaxy collection install -r requirements.yml -p collections --force --no-cache
+    - |
+      if [ "$CI_COMMIT_REF_NAME" = "$CI_DEFAULT_BRANCH" ]; then
+        TAINT="true"
+      else
+        TAINT="false"
+      fi
+
+      echo "TAINT=$TAINT"
+
+      ansible-playbook site.yml -e cluster=$VERSION -e k3s_taint_control_planes=$TAINT
+
