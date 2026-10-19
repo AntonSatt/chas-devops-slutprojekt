@@ -1,0 +1,19 @@
+{{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled }}
+# Talar om för Prometheus att hämta metrics från MySQL-servicens port metrics.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "ghost-chart.fullname" . }}-mysql
+  labels:
+    {{- include "ghost-chart.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+spec:
+  # väljer MySQL-servicen via samma labels som den har
+  selector:
+    matchLabels:
+      {{- include "ghost-chart.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mysql
+  endpoints:
+    - port: metrics
+      interval: 30s
+{{- end }}

@@ -1,0 +1,33 @@
+{
+  "title": "Ghost - MySQL",
+  "uid": "ghost-mysql",
+  "schemaVersion": 39,
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "MySQL uppe",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "mysql_up" }]
+    },
+    {
+      "type": "stat",
+      "title": "Upptid",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [{ "expr": "mysql_global_status_uptime" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Anslutningar",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "targets": [{ "expr": "mysql_global_status_threads_connected" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Frågor per sekund",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "targets": [{ "expr": "rate(mysql_global_status_queries[5m])" }]
+    }
+  ]
+}

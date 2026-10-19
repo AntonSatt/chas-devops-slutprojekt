@@ -1,0 +1,18 @@
+# Startskript som MySQL kör en gång, när databasen skapas.
+# Skapar användaren exporter med bara de rättigheter mysqld_exporter behöver
+# (från exporterns README, "Required Grants").
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ghost-chart.fullname" . }}-mysql-initdb
+  labels:
+    {{- include "ghost-chart.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+data:
+  create-exporter-user.sh: |
+    #!/bin/bash
+    set -e
+    mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
+    CREATE USER 'exporter'@'127.0.0.1' IDENTIFIED BY '$MYSQL_EXPORTER_PASSWORD' WITH MAX_USER_CONNECTIONS 3;
+    GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'exporter'@'127.0.0.1';
+    SQL

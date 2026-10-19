@@ -10,9 +10,13 @@
       - app_secrets_synapse_postgres_password | length > 0
       - app_secrets_synapse_registration_shared_secret | length > 0
       - app_secrets_tsig_secret | length > 0
+      - app_secrets_ghost_mysql_root_password | length > 0
+      - app_secrets_ghost_mysql_password | length > 0
+      - app_secrets_ghost_mysql_exporter_password | length > 0
     fail_msg: >-
       GRAFANA_ADMIN_PASSWORD, MATTERMOST_WEBHOOK_URL, SYNAPSE_POSTGRES_PASSWORD,
-      SYNAPSE_REGISTRATION_SHARED_SECRET eller TF_VAR_tsig_secret saknas i miljön.
+      SYNAPSE_REGISTRATION_SHARED_SECRET, TF_VAR_tsig_secret, GHOST_MYSQL_ROOT_PASSWORD,
+      GHOST_MYSQL_PASSWORD eller GHOST_MYSQL_EXPORTER_PASSWORD saknas i miljön.
       I prod kommer de från CI-variablerna med samma namn, i dev från din .envrc i
       repots rot, se docs/steg-for-steg.md.
     quiet: true
