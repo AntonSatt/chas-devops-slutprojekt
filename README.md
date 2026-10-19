@@ -28,9 +28,10 @@ var varje del ändras och felsökning steg för steg.
 ## CI-variabler
 
 Inga hemligheter i git. Allt ligger under *Settings > CI/CD > Variables*,
-masked men inte protected, så att pipelines på grenar också kan testa.
-Skyddet ligger i pipelinen i stället: på grenar körs bara validate och
-`terraform plan`, apply, Ansible och destroy körs bara på `main`.
+masked men inte protected, så att pipelines i en MR också kan testa.
+Skyddet ligger i pipelinen i stället: bara `main` bygger prod (staten
+`group1`). En MR från en gren med `pipeline` i namnet bygger ett eget
+kluster, `mr` plus MR-numret, och andra grenar kör inga jobb.
 
 | Variabel | Innehåll |
 |---|---|
