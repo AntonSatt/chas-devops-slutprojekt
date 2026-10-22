@@ -39,7 +39,8 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
 
-      serviceAccountName: {{ include "ghost-chart.serviceAccountName" . }}
+      # Ghost pratar inte med Kubernetes API, så ingen token monteras i podden
+      automountServiceAccountToken: false
       initContainers:
         - name: wait-for-mysql
           image: busybox:1.36
@@ -78,6 +79,10 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.mysql.existingSecret }}
                   key: mysql-password
+            # ingen e-post är konfigurerad, så Ghost får inte kräva en kod via mejl
+            # när en admin loggar in från en ny enhet
+            - name: security__staffDeviceVerification
+              value: "false"
 
           volumeMounts:
             - name: content
