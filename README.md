@@ -13,6 +13,17 @@ Ska du titta på, felsöka eller ändra det körande prod-klustret: se
 [drift](docs/drift.md). Där finns hur du kommer åt prod, en hälsokoll,
 var varje del ändras och felsökning steg för steg.
 
+## Prod just nu
+
+| Vad | Adress |
+|---|---|
+| Grafana | https://grafana.group-1.doe25.chas-lab.dev |
+| Element (Synapse) | https://element.group-1.doe25.chas-lab.dev |
+| Ghost | https://ghost.group-1.doe25.chas-lab.dev |
+
+Argo CD, Prometheus och Alertmanager nås med port-forward. Hur, och
+inloggningarna, står i [drift](docs/drift.md#webbsidorna).
+
 ## Arbetssätt
 
 - `main` är skyddad, allt går via merge request.
@@ -30,8 +41,12 @@ var varje del ändras och felsökning steg för steg.
 Inga hemligheter i git. Allt ligger under *Settings > CI/CD > Variables*,
 masked men inte protected, så att pipelines i en MR också kan testa.
 Skyddet ligger i pipelinen i stället: bara `main` bygger prod (staten
-`group1`). En MR från en gren med `pipeline` i namnet bygger ett eget
-kluster, `mr` plus MR-numret, och andra grenar kör inga jobb.
+`group1`). Varje MR bygger ett eget kluster, `mr` plus MR-numret, som rivs
+med `terraform-destroy` (för hand, eller av GitLab när grenen tas bort vid
+merge). En push till en gren utan MR kör bara `build-util-image`, och bara
+om `ci/util.Dockerfile` eller `.gitlab-ci.yml` har ändrats. Ändrar en MR
+bara text: skriv `[skip ci]` i den senaste commitens meddelande, så byggs
+inget kluster.
 
 | Variabel | Innehåll |
 |---|---|
