@@ -41,8 +41,12 @@ inloggningarna, står i [drift](docs/drift.md#webbsidorna).
 Inga hemligheter i git. Allt ligger under *Settings > CI/CD > Variables*,
 masked men inte protected, så att pipelines i en MR också kan testa.
 Skyddet ligger i pipelinen i stället: bara `main` bygger prod (staten
-`group1`). En MR från en gren med `pipeline` i namnet bygger ett eget
-kluster, `mr` plus MR-numret, och andra grenar kör inga jobb.
+`group1`). Varje MR bygger ett eget kluster, `mr` plus MR-numret, som rivs
+med `terraform-destroy` (för hand, eller av GitLab när grenen tas bort vid
+merge). En push till en gren utan MR kör bara `build-util-image`, och bara
+om `ci/util.Dockerfile` eller `.gitlab-ci.yml` har ändrats. Ändrar en MR
+bara text: skriv `[skip ci]` i den senaste commitens meddelande, så byggs
+inget kluster.
 
 | Variabel | Innehåll |
 |---|---|
