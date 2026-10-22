@@ -1,0 +1,21 @@
+# Körs bara med helm test, aldrig vid installation. Frågar Giteas
+# /api/healthz via Servicen. Svaret är 200 bara om Gitea når databasen, så
+# testet visar att hela kedjan Service → Gitea → Postgres fungerar.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "gitea.fullname" . }}-test-healthz
+  labels:
+    {{- include "gitea.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    # gammal testpod tas bort före nästa körning, lyckad tas bort direkt
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  containers:
+    - name: wget
+      image: busybox:1.37
+      # wget avslutar med fel om svaret inte är 2xx, och då misslyckas testet
+      command: ["wget", "-qO-", "http://{{ include "gitea.fullname" . }}:3000/api/healthz"]

@@ -8,3 +8,5 @@ app_secrets_tsig_secret: "{{ lookup('ansible.builtin.env', 'TF_VAR_tsig_secret')
 app_secrets_ghost_mysql_root_password: "{{ lookup('ansible.builtin.env', 'GHOST_MYSQL_ROOT_PASSWORD') }}"
 app_secrets_ghost_mysql_password: "{{ lookup('ansible.builtin.env', 'GHOST_MYSQL_PASSWORD') }}"
 app_secrets_ghost_mysql_exporter_password: "{{ lookup('ansible.builtin.env', 'GHOST_MYSQL_EXPORTER_PASSWORD') }}"
+app_secrets_gitea_postgres_password: "{{ lookup('ansible.builtin.env', 'GITEA_POSTGRES_PASSWORD') }}"
+app_secrets_gitea_metrics_token: "{{ lookup('ansible.builtin.env', 'GITEA_METRICS_TOKEN') }}"

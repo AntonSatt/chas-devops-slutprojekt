@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "gitea.fullname" . }}-postgres
+  labels:
+    {{- include "gitea.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  replicas: 1
+  serviceName: {{ include "gitea.fullname" . }}-postgres
+  selector:
+    matchLabels:
+      {{- include "gitea.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postgres
+  template:
+    metadata:
+      labels:
+        {{- include "gitea.labels" . | nindent 8 }}
+        app.kubernetes.io/component: postgres
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: postgres
+          image: postgres:17
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: gitea
+            - name: POSTGRES_DB
+              value: gitea
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.existingSecret }}
+                  key: postgres-password
+            # En ny volym har lost+found i roten, och initdb vägrar en
+            # katalog som inte är tom. Datan läggs därför en nivå ner.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          # Readiness: ta bara trafik när Postgres tar emot anslutningar.
+          # Liveness: starta om om den slutat svara. Samma kommando, men
+          # liveness börjar först efter 30 s, så att initdb vid första
+          # starten hinner klart innan containern kan dödas.
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "gitea"]
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "gitea"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          # Med requests blir podden Burstable i stället för BestEffort, och
+          # BestEffort-poddar är de första som stängs av när noden får ont
+          # om minne. Minnesgränsen skyddar noden om Postgres läcker.
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+        {{- if .Values.metrics.enabled }}
+        # Sidecar: Postgres har ingen /metrics själv. Exportern loggar in på
+        # databasen i samma pod via localhost och visar mätvärdena på 9187.
+        - name: postgres-exporter
+          image: quay.io/prometheuscommunity/postgres-exporter:v0.20.1
+          env:
+            - name: DATA_SOURCE_URI
+              value: localhost:5432/gitea?sslmode=disable
+            - name: DATA_SOURCE_USER
+              value: gitea
+            - name: DATA_SOURCE_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.existingSecret }}
+                  key: postgres-password
+          ports:
+            - name: metrics
+              containerPort: 9187
+          # Exportern är liten. Egna requests så att schemaläggaren räknar
+          # med den och minnesgränsen stoppar den om den läcker.
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+        {{- end }}
+  # En PVC per pod, data-<podnamn>, som följer podden även om den
+  # schemaläggs om. Tas inte bort när StatefulSet:en tas bort.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.postgres.persistence.size }}

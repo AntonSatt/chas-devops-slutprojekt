@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gitea.fullname" . }}-postgres
+  labels:
+    {{- include "gitea.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  clusterIP: None
+  ports:
+    - port: 5432
+      name: postgres
+    {{- if .Values.metrics.enabled }}
+    # exporterns port, ServiceMonitor pekar ut den med namnet
+    - port: 9187
+      name: metrics
+    {{- end }}
+  selector:
+    {{- include "gitea.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+
