@@ -13,6 +13,17 @@ Ska du titta på, felsöka eller ändra det körande prod-klustret: se
 [drift](docs/drift.md). Där finns hur du kommer åt prod, en hälsokoll,
 var varje del ändras och felsökning steg för steg.
 
+## Prod just nu
+
+| Vad | Adress |
+|---|---|
+| Grafana | https://grafana.group-1.doe25.chas-lab.dev |
+| Element (Synapse) | https://element.group-1.doe25.chas-lab.dev |
+| Ghost | https://ghost.group-1.doe25.chas-lab.dev |
+
+Argo CD, Prometheus och Alertmanager nås med port-forward. Hur, och
+inloggningarna, står i [drift](docs/drift.md#webbsidorna).
+
 ## Arbetssätt
 
 - `main` är skyddad, allt går via merge request.
