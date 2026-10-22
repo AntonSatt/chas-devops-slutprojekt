@@ -52,7 +52,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "up{namespace=\"$namespace\",job=\"gitea\"}",
+          "expr": "max(up{namespace=\"$namespace\",job=\"gitea\"}) or on() vector(0)",
           "legendFormat": ""
         }
       ],
@@ -120,7 +120,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "pg_up{namespace=\"$namespace\"}",
+          "expr": "max(pg_up{namespace=\"$namespace\"}) or on() vector(0)",
           "legendFormat": ""
         }
       ],
