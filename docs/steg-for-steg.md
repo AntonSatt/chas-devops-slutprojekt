@@ -603,9 +603,11 @@ Steg 5 till 7 är desamma, se [drift.md](drift.md).
 | `ansible-deploy` | `site.yml -e cluster=group1` med taint på control planes | steg 4 |
 | `terraform-destroy` | manuell, finns inte för `group1` | steg 8 |
 
-En MR från en gren med `pipeline` i namnet bygger ett eget kluster,
-`mr` plus MR-numret, som rivs med `terraform-destroy`. Kör aldrig steg 3
-eller 4 mot prod från din dator, se *Regler* i README.
+Varje MR bygger ett eget kluster, `mr` plus MR-numret, som rivs med
+`terraform-destroy` (för hand, eller av GitLab när grenen tas bort vid
+merge). Ändrar MR:en bara text, skriv `[skip ci]` i den senaste commitens
+meddelande. Kör aldrig steg 3 eller 4 mot prod från din dator, se *Regler*
+i README.
 
 ## När en del blir klar
 
