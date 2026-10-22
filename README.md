@@ -9,6 +9,10 @@ Ny i projektet, eller vill du förstå hur allt hänger ihop? Bygg ett eget
 kluster från noll med [steg-för-steg-guiden](docs/steg-for-steg.md). Den
 visar också vilka delar som är klara.
 
+Ska du titta på, felsöka eller ändra det körande prod-klustret: se
+[drift](docs/drift.md). Där finns hur du kommer åt prod, en hälsokoll,
+var varje del ändras och felsökning steg för steg.
+
 ## Arbetssätt
 
 - `main` är skyddad, allt går via merge request.
@@ -24,9 +28,10 @@ visar också vilka delar som är klara.
 ## CI-variabler
 
 Inga hemligheter i git. Allt ligger under *Settings > CI/CD > Variables*,
-masked men inte protected, så att pipelines på grenar också kan testa.
-Skyddet ligger i pipelinen i stället: på grenar körs bara validate och
-`terraform plan`, apply, Ansible och destroy körs bara på `main`.
+masked men inte protected, så att pipelines i en MR också kan testa.
+Skyddet ligger i pipelinen i stället: bara `main` bygger prod (staten
+`group1`). En MR från en gren med `pipeline` i namnet bygger ett eget
+kluster, `mr` plus MR-numret, och andra grenar kör inga jobb.
 
 | Variabel | Innehåll |
 |---|---|
@@ -46,9 +51,8 @@ Skicka aldrig värden i klartext i en kanal.
 
 Terraform-state ligger i GitLab (*Operate > Terraform states*), inte i en fil
 på någons laptop. Var och en har en egen state och ett eget kluster, med sitt
-namn som prefix på alla resurser. Den delade staten
-`group1` är prod (`cluster_name = group1`) och ändras
-bara via merge request.
+namn som prefix på alla resurser. Staten `group1` är prod
+(`cluster_name = group1`) och ändras bara av pipelinen, via merge request.
 
 Ska du bara köra Ansible behöver du inget av detta, se *Ansible* nedan.
 
@@ -314,7 +318,7 @@ peka om dem till din worker med `--resolve`:
 
 ```bash
 H=element.group-1.doe25.chas-lab.dev; W=<din-workers-ip>
-curl -sI --resolve $H:80:$W http://$H | head -1      # 308 till https
+curl -sI --resolve $H:80:$W http://$H | head -1      # 301 till https
 curl -skv --resolve $H:443:$W https://$H -o /dev/null 2>&1 | grep issuer:
 ```
 
