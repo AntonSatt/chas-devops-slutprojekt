@@ -16,8 +16,13 @@ loki:
   pattern_ingester:
     enabled: true
   limits_config:
+    retention_period: 168h
     allow_structured_metadata: true
     volume_enabled: true
+  # compactor rensar loggar äldre än retention_period
+  compactor:
+    retention_enabled: true
+    delete_request_store: filesystem
   rulerConfig:
     enable_api: true
     

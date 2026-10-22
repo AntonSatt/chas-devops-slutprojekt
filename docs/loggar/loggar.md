@@ -98,3 +98,17 @@ Loggdelen installeras av tre Argo CD-appar i `kubernetes/apps/templates/`:
 - `loggar` lägger in manifesten i `kubernetes/manifests/loggar/`, just nu Grafana-datasourcen
 
 `loki` och `alloy` är byggda som `monitoring.yaml`, med charten från ett externt repo och values från vårt. `loggar` är byggd som `larmtest.yaml` och läser en mapp i repot. Chartversionerna är låsta, 18.15.1 för Loki och 1.13.1 för Alloy.
+
+
+## Retention
+
+Loki sparar loggar i 7 dagar (`retention_period: 168h`). Utan en gräns sparas
+loggarna för alltid, disken blir full och Loki slutar ta emot loggar, utan larm.
+
+Det är compactorn som rensar (`compactor.retention_enabled: true`). När retention
+är på kräver Loki också `delete_request_store`, här `filesystem` eftersom loggarna
+ligger på disk. Källa: Lokis dokumentation, "Log retention".
+
+7 dagar räcker för felsökning och ryms på 5Gi. Diskens användning syns med:
+
+    kubectl -n logging exec loki-0 -c loki -- df -h /var/loki
