@@ -192,6 +192,8 @@ grep -q '^export SYNAPSE_REGISTRATION_SHARED_SECRET=' .envrc || echo "export SYN
 grep -q '^export GHOST_MYSQL_ROOT_PASSWORD=' .envrc || echo "export GHOST_MYSQL_ROOT_PASSWORD=$(openssl rand -hex 16)" >> .envrc
 grep -q '^export GHOST_MYSQL_PASSWORD=' .envrc || echo "export GHOST_MYSQL_PASSWORD=$(openssl rand -hex 16)" >> .envrc
 grep -q '^export GHOST_MYSQL_EXPORTER_PASSWORD=' .envrc || echo "export GHOST_MYSQL_EXPORTER_PASSWORD=$(openssl rand -hex 16)" >> .envrc
+grep -q '^export GITEA_POSTGRES_PASSWORD=' .envrc || echo "export GITEA_POSTGRES_PASSWORD=$(openssl rand -hex 24)" >> .envrc
+grep -q '^export GITEA_METRICS_TOKEN=' .envrc || echo "export GITEA_METRICS_TOKEN=$(openssl rand -hex 24)" >> .envrc
 chmod 600 .envrc
 direnv allow
 ```
@@ -214,7 +216,8 @@ for v in HCLOUD_TOKEN GITLAB_ACCESS_TOKEN GITLAB_USER_NAME \
   TF_VAR_cluster_name TF_VAR_admin_cidr K3S_TOKEN \
   ARGOCD_REPO_USER ARGOCD_REPO_TOKEN MATTERMOST_WEBHOOK_URL TF_VAR_tsig_secret \
   GRAFANA_ADMIN_PASSWORD SYNAPSE_POSTGRES_PASSWORD SYNAPSE_REGISTRATION_SHARED_SECRET \
-  GHOST_MYSQL_ROOT_PASSWORD GHOST_MYSQL_PASSWORD GHOST_MYSQL_EXPORTER_PASSWORD; do
+  GHOST_MYSQL_ROOT_PASSWORD GHOST_MYSQL_PASSWORD GHOST_MYSQL_EXPORTER_PASSWORD \
+  GITEA_POSTGRES_PASSWORD GITEA_METRICS_TOKEN; do
   val=$(printenv "$v")
   if [ -n "$val" ] && [ "$val" != "..." ]; then echo "ok      $v"; else echo "SAKNAS  $v"; fi
 done

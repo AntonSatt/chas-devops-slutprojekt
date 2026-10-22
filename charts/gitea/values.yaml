@@ -1,0 +1,38 @@
+image:
+  repository: gitea/gitea
+  # tom = Chart.yaml:s appVersion, så versionen bara står på ett ställe
+  tag: ""
+
+ingress:
+  # Adressen Gitea nås på. Styr Ingressen, ROOT_URL och NOTES.txt.
+  # Lokalt namn här, klustrets riktiga host sätts i kubernetes/values/gitea.yaml.
+  host: gitea.localhost
+
+# Giteas PVC för /data. Repona ligger här, så storleken styr hur mycket
+# som får plats.
+persistence:
+  size: 10Gi
+
+# requests styr schemaläggningen, minnestaket skyddar noden mot läckor.
+# Ingen CPU-limit: den throttlar Gitea i onödan, och requests räcker för
+# att dela CPU rättvist.
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
+
+# Giteas /metrics och postgres_exporter-sidecaren i Postgres-podden.
+metrics:
+  enabled: true
+  # Secret med nyckeln token, skapad av Ansible (app_secrets). Utan token
+  # hade /metrics varit öppen för alla via Ingressen.
+  existingSecret: gitea-metrics
+
+postgres:
+  # Secret som Ansible (rollen app_secrets) skapar före Argo-synken.
+  # Lösenordet ligger under nyckeln postgres-password, aldrig i git.
+  existingSecret: gitea-postgres
+  persistence:
+    size: 5Gi

@@ -1,0 +1,44 @@
+{{- if .Values.metrics.enabled }}
+# Prometheus Operator gör om ServiceMonitors till skrapkonfiguration. Den
+# väljer Services på labels och skrapar porten med det angivna namnet.
+# Giteas /metrics ligger på webbporten.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "gitea.fullname" . }}
+  labels:
+    {{- include "gitea.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gitea
+spec:
+  selector:
+    matchLabels:
+      {{- include "gitea.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: gitea
+  endpoints:
+    - port: http
+      path: /metrics
+      # Gitea kräver token på /metrics. Operatorn läser den ur Secret:en,
+      # som måste ligga i samma namespace som ServiceMonitor:n.
+      authorization:
+        type: Bearer
+        credentials:
+          name: {{ .Values.metrics.existingSecret }}
+          key: token
+---
+# postgres_exporter-sidecaren, via headless-Servicens metrics-port.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "gitea.fullname" . }}-postgres
+  labels:
+    {{- include "gitea.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  selector:
+    matchLabels:
+      {{- include "gitea.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postgres
+  endpoints:
+    - port: metrics
+      path: /metrics
+{{- end }}

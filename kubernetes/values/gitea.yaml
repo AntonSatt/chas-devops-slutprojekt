@@ -1,0 +1,3 @@
+# Gitea i klustret. Allt annat har chartets standardvärden.
+ingress:
+  host: gitea.group-1.doe25.chas-lab.dev

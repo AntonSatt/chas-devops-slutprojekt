@@ -1,0 +1,17 @@
+{{- if .Values.metrics.enabled }}
+# Grafanas sidecar letar i alla namespaces efter ConfigMaps med labeln
+# grafana_dashboard: "1" och laddar in JSON:en. Gruppens konvention, se
+# docs/monitoring/monitoring.md.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "gitea.fullname" . }}-dashboard
+  labels:
+    {{- include "gitea.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+data:
+  # Files.Get läser filen som den är. Grafanas egna klammerparenteser i
+  # legenderna renderas alltså inte av Helm.
+  gitea.json: |-
+    {{- .Files.Get "dashboards/gitea.json" | nindent 4 }}
+{{- end }}

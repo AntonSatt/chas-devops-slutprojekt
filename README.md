@@ -59,6 +59,7 @@ inget kluster.
 | `ARGOCD_REPO_USER` / `ARGOCD_REPO_TOKEN` | deploy-token så Argo CD kan läsa repot (token masked) |
 | `SYNAPSE_POSTGRES_PASSWORD` / `SYNAPSE_REGISTRATION_SHARED_SECRET` | Synapse lösenord till Postgres och hemligheten för att skapa användare (masked) |
 | `GHOST_MYSQL_ROOT_PASSWORD` / `GHOST_MYSQL_PASSWORD` / `GHOST_MYSQL_EXPORTER_PASSWORD` | Ghosts MySQL: root, Ghosts användare och exporterns användare (masked) |
+| `GITEA_POSTGRES_PASSWORD` / `GITEA_METRICS_TOKEN` | Giteas Postgres-lösenord och token som skyddar Giteas `/metrics` (masked) |
 
 Skicka aldrig värden i klartext i en kanal.
 
@@ -412,6 +413,26 @@ echo "export GHOST_MYSQL_ROOT_PASSWORD=$(openssl rand -hex 16)" >> .envrc
 echo "export GHOST_MYSQL_PASSWORD=$(openssl rand -hex 16)" >> .envrc
 echo "export GHOST_MYSQL_EXPORTER_PASSWORD=$(openssl rand -hex 16)" >> .envrc
 ```
+
+## Gitea
+
+Gitea med Postgres, en egen chart i `charts/gitea/`. Argo CD deployar den som
+appen `gitea`, på https://gitea.group-1.doe25.chas-lab.dev.
+
+Secreterna `gitea-postgres` och `gitea-metrics` kommer från CI-variablerna
+`GITEA_POSTGRES_PASSWORD` och `GITEA_METRICS_TOKEN`. I dev skapar du egna, en
+gång, från repots rot:
+
+```bash
+echo "export GITEA_POSTGRES_PASSWORD=$(openssl rand -hex 24)" >> .envrc
+echo "export GITEA_METRICS_TOKEN=$(openssl rand -hex 24)" >> .envrc
+```
+
+Byte av värdena slår inte igenom av sig självt. Gitea läser token när podden
+startar, så efter ett nytt `GITEA_METRICS_TOKEN` och en Ansible-körning:
+`kubectl -n gitea rollout restart deploy/gitea`. Postgres läser
+`POSTGRES_PASSWORD` bara när databasen skapas. Ett nytt lösenord måste också
+sättas i databasen (`ALTER USER gitea PASSWORD '...'`) innan poddarna startas om.
 
 ## Spelregler
 

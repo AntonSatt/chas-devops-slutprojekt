@@ -1,0 +1,27 @@
+# Gitea med Postgres, chart i charts/gitea. Klustrets värden (hostnamn) ligger
+# i kubernetes/values/gitea.yaml. Lösenordet till Postgres skapar Ansible
+# (rollen app_secrets) som Secret i namespacet gitea före synken.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gitea
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.repoURL }}
+    targetRevision: {{ .Values.revision }}
+    path: charts/gitea
+    helm:
+      # relativt chartets katalog
+      valueFiles:
+        - ../../kubernetes/values/gitea.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gitea
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

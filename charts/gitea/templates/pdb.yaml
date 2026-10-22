@@ -1,0 +1,32 @@
+# PodDisruptionBudget: hindrar frivilliga avbrott, t.ex. kubectl drain, från
+# att ta ner podden. Båda volymerna är local-path och bundna till en nod, så
+# podden kan inte flytta till en annan nod. En drain skulle bara lämna den
+# Pending. Med minAvailable 1 stannar drain i stället, och den som underhåller
+# noden måste bestämma sig medvetet. Krascher och kubectl delete pod påverkas inte.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "gitea.fullname" . }}
+  labels:
+    {{- include "gitea.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gitea
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      {{- include "gitea.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: gitea
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "gitea.fullname" . }}-postgres
+  labels:
+    {{- include "gitea.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      {{- include "gitea.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postgres

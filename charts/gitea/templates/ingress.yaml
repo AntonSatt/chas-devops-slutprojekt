@@ -1,0 +1,22 @@
+# Ingen tls-sektion, enligt gruppens konvention: Traefik skickar 80 vidare
+# till 443 och använder wildcard-certet som standardcert för alla hostar.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "gitea.fullname" . }}
+  labels:
+    {{- include "gitea.labels" . | nindent 4 }}
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          # allt under / till Gitea-Servicen
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "gitea.fullname" . }}
+                port:
+                  name: http

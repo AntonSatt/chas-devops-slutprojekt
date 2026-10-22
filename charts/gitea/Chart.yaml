@@ -1,0 +1,8 @@
+apiVersion: v2
+name: gitea
+description: Gitea med Postgres, metrics och Grafana-dashboard
+type: application
+# Chartets egen version. Höjs när mallarna ändras.
+version: 0.1.0
+# Gitea-versionen. Används som image-tagg när image.tag är tom.
+appVersion: "28.2.0"

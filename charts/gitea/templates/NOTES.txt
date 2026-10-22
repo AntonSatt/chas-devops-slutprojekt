@@ -1,0 +1,21 @@
+Gitea är installerat i namespacet {{ .Release.Namespace }}.
+
+1. Adress (Traefik står för HTTPS med klustrets wildcard-cert):
+   https://{{ .Values.ingress.host }}/
+
+2. Installationsguiden är avstängd. Skapa första administratören i podden.
+   gitea vägrar köra som root, därför su-exec git:
+
+   kubectl -n {{ .Release.Namespace }} exec deploy/{{ include "gitea.fullname" . }} -- \
+     su-exec git gitea admin user create --admin --username <namn> --email <e-post> --random-password
+
+3. Databasens lösenord läses från Secret:en {{ .Values.postgres.existingSecret }}
+   (nyckeln postgres-password). Den måste finnas innan installationen.
+   Följ starten med:
+
+   kubectl -n {{ .Release.Namespace }} get pods -w
+{{- if .Values.metrics.enabled }}
+
+4. Monitoring: två mål i Prometheus, {{ include "gitea.fullname" . }} och
+   {{ include "gitea.fullname" . }}-postgres, och dashboarden "Gitea" i Grafana.
+{{- end }}
