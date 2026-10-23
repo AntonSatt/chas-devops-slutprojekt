@@ -35,6 +35,9 @@ workflow:
 .terraform:
   image: $IMAGE_UTIL
   variables:
+    # Port 6443 är öppen för alla, gruppen når API:et från laptops med olika IP
+    # (port-forward, kubectl). API:et kräver certifikat. CI behöver inte porten,
+    # Ansible kör helm och kubectl på noden.
     TF_VAR_admin_cidr: "0.0.0.0/0"
     TF_VAR_cluster_name: "$VERSION"
   rules:

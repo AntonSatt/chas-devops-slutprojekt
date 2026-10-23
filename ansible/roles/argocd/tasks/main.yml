@@ -1,6 +1,6 @@
 # Körs på klustrets första control plane. k3s kubeconfig finns redan där,
-# så varken Helm eller kubectl behöver nå klustret utifrån. Port 6443 är
-# bara öppen för admin_cidr, så från CI hade det inte gått.
+# så varken Helm eller kubectl behöver nå klustret utifrån. Rollen fungerar därför
+# oavsett vem brandväggen släpper in på port 6443.
 
 - name: Ser om repo-token finns
   ansible.builtin.assert:
