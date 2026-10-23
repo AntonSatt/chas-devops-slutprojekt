@@ -42,10 +42,16 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
+          # Startup: ger Postgres upp till 300 s (30 × 10 s) att bli klar, både
+          # initdb första gången och crash recovery efter ett avbrott. Liveness
+          # och readiness börjar först när startup lyckats.
           # Readiness: ta bara trafik när Postgres tar emot anslutningar.
-          # Liveness: starta om om den slutat svara. Samma kommando, men
-          # liveness börjar först efter 30 s, så att initdb vid första
-          # starten hinner klart innan containern kan dödas.
+          # Liveness: starta om om den slutat svara.
+          startupProbe:
+            exec:
+              command: ["pg_isready", "-U", "gitea"]
+            failureThreshold: 30
+            periodSeconds: 10
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "gitea"]
@@ -53,7 +59,6 @@ spec:
           livenessProbe:
             exec:
               command: ["pg_isready", "-U", "gitea"]
-            initialDelaySeconds: 30
             periodSeconds: 10
           # Med requests blir podden Burstable i stället för BestEffort, och
           # BestEffort-poddar är de första som stängs av när noden får ont
