@@ -35,16 +35,18 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.postgres.existingSecret }}
                   key: postgres-password
-            # En ny volym har lost+found i roten, och initdb vägrar en
-            # katalog som inte är tom. Datan läggs därför en nivå ner.
+            # Datan en nivå ner i volymen. På en formaterad disk finns lost+found
+            # i roten, och initdb vägrar en katalog som inte är tom. local-path
+            # har ingen lost+found, men chartet ska fungera på båda.
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
-          # Startup: ger Postgres upp till 300 s (30 × 10 s) att bli klar, både
-          # initdb första gången och crash recovery efter ett avbrott. Liveness
-          # och readiness börjar först när startup lyckats.
+          # Startup: ger Postgres upp till 300 s (30 × 10 s) att bli klar när
+          # containern startar, både initdb första gången och crash recovery
+          # efter en omstart. Liveness och readiness börjar först när startup
+          # lyckats.
           # Readiness: ta bara trafik när Postgres tar emot anslutningar.
           # Liveness: starta om om den slutat svara.
           startupProbe:

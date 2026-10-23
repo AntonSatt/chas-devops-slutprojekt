@@ -5,8 +5,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: {{ include "gitea.fullname" . }}-data
   # Repona ska överleva att chartet tas bort. Helm hoppar över PVC:n vid
-  # helm uninstall, och Argo tar inte bort den vid prune eller när appen
-  # raderas. Postgres PVC från volumeClaimTemplates blir kvar av sig själv.
+  # helm uninstall, och Argo lämnar den kvar när appen raderas. Postgres PVC
+  # från volumeClaimTemplates blir kvar av sig själv.
   annotations:
     helm.sh/resource-policy: keep
     argocd.argoproj.io/sync-options: Delete=false
