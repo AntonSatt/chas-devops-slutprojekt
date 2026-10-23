@@ -85,7 +85,7 @@ steg 3 i [steg-för-steg-guiden](docs/steg-for-steg.md).
 | Variabel | Värde |
 |---|---|
 | `cluster_name` | ditt eget namn för dev-miljö, tex 'thomas'. Prod är 'group1' och sätts snart bara av CI :) |
-| `admin_cidr` | din publika IP som `1.2.3.4/32`, den enda som når port 6443 på ditt kluster |
+| `admin_cidr` | din publika IP som `1.2.3.4/32`, den enda som når port 6443 på ditt kluster. Kluster som CI bygger (`group1` och `mr<nummer>`) får `0.0.0.0/0`, motiveringen står i `.gitlab-ci.yml` |
 | `worker_count` | valfri, standard `0`. Sätt `1` för en worker-VM i ditt kluster, se *Workern* nedan. Sätts aldrig för prod |
 
 `worker_ip` har ett standardvärde i koden och behöver inte sättas. Adressen
