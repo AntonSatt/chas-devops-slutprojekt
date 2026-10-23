@@ -57,6 +57,15 @@ readinessProbe:
     path: /
     port: http
   initialDelaySeconds: 30
+# första starten bygger hela databasen och kan ta flera minuter.
+# Tills startupProben lyckats körs inte liveness och readiness, så Ghost
+# dödas inte mitt i databasbygget. 30 försök x 10 sekunder = 5 minuter.
+startupProbe:
+  httpGet:
+    path: /
+    port: http
+  periodSeconds: 10
+  failureThreshold: 30
 
 nodeSelector: {}
 tolerations: []
