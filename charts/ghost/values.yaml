@@ -50,12 +50,18 @@ livenessProbe:
   httpGet:
     path: /
     port: http
+    httpHeaders:
+      - name: X-Forwarded-Proto
+        value: https
   #första starten bygger databasen, så Ghost får tid innan den kontrolleras
   initialDelaySeconds: 60
 readinessProbe:
   httpGet:
     path: /
     port: http
+    httpHeaders:
+      - name: X-Forwarded-Proto
+        value: https
   initialDelaySeconds: 30
 # första starten bygger hela databasen och kan ta flera minuter.
 # Tills startupProben lyckats körs inte liveness och readiness, så Ghost
@@ -64,6 +70,9 @@ startupProbe:
   httpGet:
     path: /
     port: http
+    httpHeaders:
+      - name: X-Forwarded-Proto
+        value: https
   periodSeconds: 10
   failureThreshold: 30
 
