@@ -19,4 +19,9 @@ RUN apk add --no-cache \
     openssh-client \
     python3 \
     py3-requests \
-    py3-dateutil
+    py3-dateutil \
+    bash \
+    git \
+    kubectl \
+    jq \
+    openssl

@@ -3,8 +3,13 @@ TF_STATE_NAME=$1
 STATE_URL="https://git.chas-lab.dev/api/v4/projects/582/terraform/state"
 
 if [[ -z "$TF_STATE_NAME" ]]; then
-    echo "usage: $0 STATE_NAME"
-    exit 1
+    if [[ -n "$TF_VAR_cluster_name" ]]; then
+        TF_STATE_NAME=$TF_VAR_cluster_name
+        echo "using cluster_name as state name: $TF_STATE_NAME"
+    else
+        echo "usage: $0 STATE_NAME"
+        exit 1
+    fi
 fi
 
 if ! [[ -f "main.tf" ]]; then

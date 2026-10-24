@@ -44,8 +44,23 @@
   roles:
     - k3s_agent
 
+
+- name: Create sealed-secret keys
+  hosts: localhost
+  become: false
+  gather_facts: false
+  tasks:
+    - name: Apply secrets
+      ansible.builtin.command:
+        cmd: "{{ dir }}/scripts/sealed-secret-keys.sh put"
+        chdir: "{{ dir }}"
+      vars:
+        dir: "{{ playbook_dir | dirname }}"
+      environment:
+        ALSO_FETCH: "true"
+        KUBECONFIG: "{{ dir }}/{{ cluster }}.kubeconfig"
+
 - name: Lägger in secrets och Argo CD, sen synkas resten från git
   hosts: "cluster_{{ cluster }}:&cp_first"
   roles:
-    - app_secrets
     - argocd
