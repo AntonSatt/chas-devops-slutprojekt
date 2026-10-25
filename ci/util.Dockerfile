@@ -24,4 +24,5 @@ RUN apk add --no-cache \
     git \
     kubectl \
     jq \
-    openssl
+    openssl \
+    helm
