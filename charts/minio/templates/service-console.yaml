@@ -8,7 +8,7 @@ spec:
   type: {{ .Values.serviceConsole.type }}
   ports:
     - port: {{ .Values.serviceConsole.port }}
-      targetPort: http
+      targetPort: http-console
       protocol: TCP
       name: http
   selector:
