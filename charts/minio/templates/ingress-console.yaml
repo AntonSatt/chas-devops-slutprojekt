@@ -1,0 +1,43 @@
+{{- if .Values.ingressConsole.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "minio.fullname" . }}-console
+  labels:
+    {{- include "minio.labels" . | nindent 4 }}
+  {{- with .Values.ingressConsole.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingressConsole.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- if .Values.ingressConsole.tls }}
+  tls:
+    {{- range .Values.ingressConsole.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.ingressConsole.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            {{- with .pathType }}
+            pathType: {{ . }}
+            {{- end }}
+            backend:
+              service:
+                name: {{ include "minio.fullname" $ }}-console
+                port:
+                  number: {{ $.Values.serviceConsole.port }}
+          {{- end }}
+    {{- end }}
+{{- end }}
