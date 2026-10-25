@@ -109,7 +109,7 @@ terraform-validate:
   variables:
     DIR: terraform
   rules:
-    - if: $DEPLOY
+    - if: $DEPLOY == "true"
   script:
     - terraform validate
 
@@ -125,7 +125,7 @@ terraform-deploy:
   variables:
     DIR: terraform
   rules:
-    - if: $DEPLOY
+    - if: $DEPLOY == "true"
   script:
     - terraform apply -auto-approve
 
@@ -167,7 +167,7 @@ helm-lint:
     - helm lint kubernetes/apps/ kubernetes/secrets
     - helm template kubernetes/apps
   rules:
-    - if: $DEPLOY
+    - if: $DEPLOY == "true"
 
 
 terraform-destroy:
@@ -181,7 +181,7 @@ terraform-destroy:
   needs:
     - terraform-deploy
   rules:
-    - if: $DEPLOY && $VERSION && $VERSION != "group1"
+    - if: $DEPLOY == "true" && $VERSION && $VERSION != "group1"
       when: manual
   script:
     - terraform destroy -auto-approve
@@ -196,7 +196,7 @@ ansible-deploy:
   needs:
     - terraform-deploy
   rules:
-    - if: $DEPLOY
+    - if: $DEPLOY == "true"
   script:
     - echo "deploying to cluster=$VERSION"
     - ansible-galaxy collection install -r requirements.yml -p collections --force --no-cache
