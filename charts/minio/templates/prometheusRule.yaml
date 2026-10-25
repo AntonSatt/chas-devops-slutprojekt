@@ -1,0 +1,30 @@
+{{- if .Values.metrics.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "minio.fullname" . }}-rules
+  labels:
+    {{- include "minio.labels" . | nindent 4 }}
+spec:
+  groups:
+    - name: minio.health.rules
+      rules:
+        - alert: MinIOInstanceDown
+          expr: up{job=~".*minio.*"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "MinIO instance is down"
+            description: "The MinIO metrics target has been unreachable for more than 2 minutes."
+    - name: minio.storage.rules
+      rules:
+        - alert: MinIOLowDiskSpace
+          expr: (minio_node_storage_free_bytes / minio_node_storage_total_bytes) * 100 < 15
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "MinIO disk space is running low"
+            description: "Free storage space on the MinIO instance is below 15% for over 2 minutes."
+{{- end }}

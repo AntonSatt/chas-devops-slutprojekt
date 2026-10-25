@@ -20,3 +20,17 @@
   echo "Visit http://127.0.0.1:8080 to use your application"
   kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
 {{- end }}
+
+
+to test it you can run this:
+
+kubectl delete ns minio
+helm install -n minio --create-namespace minio .
+kubectl create secret generic minio-root \
+  --namespace minio \
+  --from-literal=username=admin \
+  --from-literal=password=superduberlong
+sleep 30
+helm test minio -n minio
+
+NOTE: it can fail if the pod has not started yet

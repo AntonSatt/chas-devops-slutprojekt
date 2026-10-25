@@ -22,6 +22,14 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
+      initContainers:
+        - name: fix-permissions
+          image: busybox:latest
+          command: ["sh", "-c", "chmod 777 /data"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -57,6 +65,28 @@ spec:
                   key: password
             - name: MINIO_PROMETHEUS_AUTH_TYPE
               value: "public"
+          startupProbe:
+            httpGet:
+              path: /minio/health/live
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
   volumeClaimTemplates:
     - metadata:
         name: data
