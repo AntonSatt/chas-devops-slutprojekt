@@ -147,6 +147,19 @@ terraform-deploy-dns:
   script:
     - terraform apply -auto-approve
 
+helm-lint:
+  image: $IMAGE_UTIL
+  stage: validate
+  script:
+    - helm lint charts/*
+    - helm lint kubernetes/apps/ kubernetes/secrets
+    - helm template kubernetes/apps
+  rules:
+    - if: $VERSION
+      changes: 
+        - charts/**/*
+        - kubernetes/**/*
+        - .gitlab-ci.yml
 
 
 terraform-destroy:
