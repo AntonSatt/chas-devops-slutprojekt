@@ -13,6 +13,12 @@ variables:
 
 workflow:
   rules:
+
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      variables:
+        VERSION: group1
+        DEPLOY: false
+
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH  &&  $CI_PIPELINE_SOURCE != "merge_request_event"  &&  $CI_PIPELINE_SOURCE != "schedule"
       variables:
         VERSION: group1
@@ -23,14 +29,9 @@ workflow:
         VERSION: mr$CI_MERGE_REQUEST_IID
         DEPLOY: true
 
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-      variables:
-        VERSION: group1
-        DEPLOY: ""
-
     - when: always
       variables:
-        DEPLOY: ""
+        DEPLOY: false
 
 
 .buildkit:
@@ -230,8 +231,9 @@ put-sealed-secrets:
     - git config --global push.autoSetupRemote true # push to remote without needing --set-upstream arg
     - git remote set-url origin https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
     - git switch $CI_COMMIT_BRANCH
+    - git branch --set-upstream-to=origin/main main
 
-    - echo updating sealed secrets for cluster '$VERSION'
+    - echo "updating sealed secrets for cluster '$VERSION'"
     - ansible-playbook kubeconfig.yml -e cluster=$VERSION -e k3s_taint_control_planes=$TAINT
     - cd ..
     - export KUBECONFIG=$PWD/$VERSION.kubeconfig
