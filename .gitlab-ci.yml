@@ -110,6 +110,7 @@ terraform-deploy:
     on_stop: terraform-destroy
   needs:
     - terraform-validate
+    - helm-lint
   variables:
     DIR: terraform
   rules:
@@ -147,6 +148,15 @@ terraform-deploy-dns:
   script:
     - terraform apply -auto-approve
 
+helm-lint:
+  image: $IMAGE_UTIL
+  stage: validate
+  script:
+    - helm lint charts/*
+    - helm lint kubernetes/apps/ kubernetes/secrets
+    - helm template kubernetes/apps
+  rules:
+    - if: $VERSION
 
 
 terraform-destroy:
