@@ -13,7 +13,7 @@ variables:
 
 workflow:
   rules:
-    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH  &&  $CI_PIPELINE_SOURCE != "merge_request_event"  &&  $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH  &&  $CI_PIPELINE_SOURCE != "merge_request_event"  &&  $CI_PIPELINE_SOURCE != "schedule"
       variables:
         VERSION: group1
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -41,8 +41,7 @@ workflow:
     # Ansible kör helm och kubectl på noden.
     TF_VAR_admin_cidr: "0.0.0.0/0"
     TF_VAR_cluster_name: "$VERSION"
-  rules:
-    - if: $VERSION
+    STATE_VERSION: "$VERSION"
   before_script:
     - |
       if [ -z "$DIR" ]; then
@@ -52,12 +51,13 @@ workflow:
 
     - cd ${DIR}
     - pwd
+    - export FULL_STATE_URL="${STATE_URL}/${STATE_VERSION}"
     - |
-      echo STATE_URL:  $STATE_URL
+      echo FULL_STATE_URL: ${FULL_STATE_URL}$
     - terraform init -reconfigure
-        -backend-config="address=${STATE_URL}/${VERSION}"
-        -backend-config="lock_address=${STATE_URL}/${VERSION}/lock"
-        -backend-config="unlock_address=${STATE_URL}/${VERSION}/lock"
+        -backend-config="address=${FULL_STATE_URL}"
+        -backend-config="lock_address=${FULL_STATE_URL}/lock"
+        -backend-config="unlock_address=${FULL_STATE_URL}/lock"
         -backend-config="username=gitlab-ci-token"
         -backend-config="password=${CI_JOB_TOKEN}"
         -backend-config="lock_method=POST"
@@ -97,6 +97,8 @@ terraform-validate:
   stage: validate
   variables:
     DIR: terraform
+  rules:
+    - if: $VERSION
   script:
     - terraform validate
 
@@ -110,6 +112,38 @@ terraform-deploy:
     - terraform-validate
   variables:
     DIR: terraform
+  rules:
+    - if: $VERSION
+  script:
+    - terraform apply -auto-approve
+
+
+.terraform-dns:
+  extends: .terraform
+  variables:
+    DIR: dns
+    TF_VAR_cluster_name: dns
+    STATE_VERSION: dns
+  rules:
+    - if: $VERSION == "group1"
+      changes:
+        - dns/**/*
+        - .gitlab-ci.yml
+
+terraform-validate-dns:
+  extends: .terraform-dns
+  stage: validate
+  script:
+    - terraform validate
+
+terraform-deploy-dns:
+  extends: .terraform-dns
+  stage: deploy
+  environment:
+    name: review/$VERSION
+    on_stop: terraform-destroy
+  needs:
+    - terraform-validate-dns
   script:
     - terraform apply -auto-approve
 
