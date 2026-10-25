@@ -57,7 +57,7 @@
       vars:
         dir: "{{ playbook_dir | dirname }}"
       environment:
-        ALSO_FETCH: "true"
+        ALSO_TEMP: "true"
         KUBECONFIG: "{{ dir }}/{{ cluster }}.kubeconfig"
 
 - name: Lägger in secrets och Argo CD, sen synkas resten från git
