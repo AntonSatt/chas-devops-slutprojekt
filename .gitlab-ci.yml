@@ -110,6 +110,7 @@ terraform-deploy:
     on_stop: terraform-destroy
   needs:
     - terraform-validate
+    - helm-lint
   variables:
     DIR: terraform
   rules:
@@ -156,10 +157,6 @@ helm-lint:
     - helm template kubernetes/apps
   rules:
     - if: $VERSION
-      changes: 
-        - charts/**/*
-        - kubernetes/**/*
-        - .gitlab-ci.yml
 
 
 terraform-destroy:
