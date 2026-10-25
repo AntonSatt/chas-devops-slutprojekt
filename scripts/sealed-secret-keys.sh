@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-dir="../devops-grupp-secrets"
-file="$dir/sealed-secrets-keys.json.enc"
-openssl_cmd="openssl enc -aes-256-cbc -pbkdf2 -pass env:SEALED_SECRETS_KEY_ENCRYPTION_PASSWORD"
-
 get() {
     echo "=== getting keys from cluster..."
     keys=$(kubectl -n kube-system get secrets -o jsonpath='{.items}' --selector sealedsecrets.bitnami.com/sealed-secrets-key)
@@ -17,7 +13,7 @@ get() {
 
         if [[ "$sorted_keys" == "$sorted_current_keys" ]]; then
             echo "=== has same keys, skipping updating"
-            exit 0
+            return 0
         fi
 
     fi
@@ -28,11 +24,16 @@ get() {
 
     if [[ "$ALSO_COMMIT" != "true" ]]; then
         echo "--- ALSO_COMMIT is not 'true', skipping commiting"
-        exit 0
+        return 0
     fi
 
 
     cd "$dir"
+
+    if [[ "$ALSO_PULL" == "true" ]]; then
+        echo "=== pulling..."
+        git pull
+    fi
 
     echo -e "\n=== commiting..."
 
@@ -41,7 +42,7 @@ get() {
 
     if [[ "$ALSO_PUSH" != "true" ]]; then
         echo "--- ALSO_PUSH is not 'true', skipping pushing"
-        exit 0
+        return 0
     fi
 
     echo -e "\n=== pushing..."
@@ -91,16 +92,33 @@ if [[ -z "$SEALED_SECRETS_KEY_ENCRYPTION_PASSWORD" ]]; then
     exit 1
 fi
 
-if [[ "$ALSO_FETCH" == "true" ]]; then
-    echo "=== fetching..."
-    git fetch
+if [[ "$ALSO_PULL" == "true" ]]; then
+    echo "=== pulling..."
+    git pull
 else
     echo "=== skipped pulling"
 fi
 
-if ! [[ -d "$dir" ]]; then
+
+dir=$(realpath "../devops-grupp-secrets")
+
+if [[ "$ALSO_TEMP" == "true" ]]; then
+
+    for i in $(git worktree list | awk '{ print $1 }'); do 
+        git worktree remove "$i" --force 2> /dev/null || true
+    done
+
+    dir=$(mktemp -d -t "devops-grupp-secrets_XXXXXX")
+
+    echo "=== using '$dir' as worktree path"
+fi
+
+file="$dir/sealed-secrets-keys.json.enc"
+openssl_cmd="openssl enc -aes-256-cbc -pbkdf2 -pass env:SEALED_SECRETS_KEY_ENCRYPTION_PASSWORD"
+
+if ! [[ -d "$dir" ]] || [[ "$ALSO_TEMP" == "true" ]]; then
     echo "=== creating worktree: $dir"
-    git worktree add ../devops-grupp-secrets secrets
+    git worktree add "$dir" secrets
 else
     echo "=== skipped creating worktree: $dir"
 fi
@@ -119,3 +137,9 @@ case $1 in
         exit 1
     ;;
 esac
+
+if [[ "$ALSO_TEMP" == "true" ]]; then
+    echo "=== removing temp worktree..."
+    git worktree remove --force "$dir"
+    rm -rf "$dir"
+fi

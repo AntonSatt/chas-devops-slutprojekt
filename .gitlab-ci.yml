@@ -13,12 +13,17 @@ variables:
 
 workflow:
   rules:
-    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH  &&  $CI_PIPELINE_SOURCE != "merge_request_event"  &&  $CI_PIPELINE_SOURCE != "schedule"
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH  &&  $CI_PIPELINE_SOURCE == "schedule"
       variables:
         VERSION: group1
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH  &&  $CI_PIPELINE_SOURCE != "merge_request_event"
+      variables:
+        VERSION: group1
+        DEPLOY: true
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       variables:
         VERSION: mr$CI_MERGE_REQUEST_IID
+        DEPLOY: true
     - when: always
 
 
@@ -98,7 +103,7 @@ terraform-validate:
   variables:
     DIR: terraform
   rules:
-    - if: $VERSION
+    - if: $DEPLOY
   script:
     - terraform validate
 
@@ -114,7 +119,7 @@ terraform-deploy:
   variables:
     DIR: terraform
   rules:
-    - if: $VERSION
+    - if: $DEPLOY
   script:
     - terraform apply -auto-approve
 
@@ -156,7 +161,7 @@ helm-lint:
     - helm lint kubernetes/apps/ kubernetes/secrets
     - helm template kubernetes/apps
   rules:
-    - if: $VERSION
+    - if: $DEPLOY
 
 
 terraform-destroy:
@@ -170,7 +175,7 @@ terraform-destroy:
   needs:
     - terraform-deploy
   rules:
-    - if: $VERSION && $VERSION && $VERSION != "group1"
+    - if: $DEPLOY && $VERSION && $VERSION != "group1"
       when: manual
   script:
     - terraform destroy -auto-approve
@@ -185,7 +190,7 @@ ansible-deploy:
   needs:
     - terraform-deploy
   rules:
-    - if: $VERSION
+    - if: $DEPLOY
   script:
     - echo "deploying to cluster=$VERSION"
     - ansible-galaxy collection install -r requirements.yml -p collections --force --no-cache
@@ -206,17 +211,19 @@ put-sealed-secrets:
   stage: maintenance
   extends: .ansible
   variables:
-    ALSO_FETCH: true
+    ALSO_PULL: true
     ALSO_COMMIT: true
     ALSO_PUSH: true
+    ALSO_TEMP: true
   rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $VERSION  &&  $CI_PIPELINE_SOURCE == "schedule"
   script:
 
     - git config --global user.name "Gitlab CI Bot"
     - git config --global user.email "gitlab-ci@example.com"
     - git config --global push.autoSetupRemote true # push to remote without needing --set-upstream arg
     - git remote set-url origin https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
+    - git switch $CI_COMMIT_BRANCH
 
     - echo updating sealed secrets for cluster '$VERSION'
     - ansible-playbook kubeconfig.yml -e cluster=$VERSION -e k3s_taint_control_planes=$TAINT
