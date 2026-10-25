@@ -48,6 +48,8 @@ om `ci/util.Dockerfile` eller `.gitlab-ci.yml` har ändrats. Ändrar en MR
 bara text: skriv `[skip ci]` i den senaste commitens meddelande, så byggs
 inget kluster.
 
+Hur pipelinen hänger ihop, och övningar: [docs/ci/ci.md](docs/ci/ci.md).
+
 | Variabel | Innehåll |
 |---|---|
 | `HCLOUD_TOKEN` | Hetzner API-token (masked) |
