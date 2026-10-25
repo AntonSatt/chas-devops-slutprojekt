@@ -18,7 +18,7 @@ ingress:
 ingressConsole:
   enabled: true
   hosts:
-    - host: minio.group-1.doe25.chas-lab.dev
+    - host: minio-console.group-1.doe25.chas-lab.dev
       paths:
         - path: /
           pathType: Prefix
