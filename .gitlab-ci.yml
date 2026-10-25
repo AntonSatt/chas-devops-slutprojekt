@@ -13,7 +13,7 @@ variables:
 
 workflow:
   rules:
-    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH  &&  $CI_PIPELINE_SOURCE != "merge_request_event"
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH  &&  $CI_PIPELINE_SOURCE != "merge_request_event"  &&  $CI_PIPELINE_SOURCE == "schedule"
       variables:
         VERSION: group1
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
