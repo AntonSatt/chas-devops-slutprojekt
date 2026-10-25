@@ -86,7 +86,8 @@ build-util-image:
         --opt filename=util.Dockerfile
         --output type=image,push=true,name=$IMAGE_UTIL
   rules:
-    - changes:
+    - if: $VERSION == "group1"
+      changes:
       - ci/util.Dockerfile
       - .gitlab-ci.yml
 
