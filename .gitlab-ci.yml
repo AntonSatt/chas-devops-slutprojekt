@@ -17,10 +17,17 @@ workflow:
       variables:
         VERSION: group1
         DEPLOY: true
+
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       variables:
         VERSION: mr$CI_MERGE_REQUEST_IID
         DEPLOY: true
+
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      variables:
+        VERSION: group1
+        DEPLOY: ""
+
     - when: always
       variables:
         DEPLOY: ""
