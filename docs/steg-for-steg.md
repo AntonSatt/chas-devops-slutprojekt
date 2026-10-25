@@ -424,7 +424,7 @@ terminal, avsluta med Ctrl-C. Med `KUBECONFIG` satt som i steg 5:
 Argo CD:s lösenord:
 
 ```bash
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d | xclip -selection clipboard
 ```
 
 ### HTTPS i ditt kluster

@@ -66,11 +66,13 @@ gruppnyckeln finns på alla noder, det är den läraren använder.
 | Alertmanager | `kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-alertmanager 9093:9093` | ingen |
 
 Prometheus och Alertmanager har ingen inloggning, därför har de ingen
-ingress. Lösenorden:
+ingress. Lösenorden går till urklipp i stället för till skärmen, så de syns
+inte vid skärmdelning och hamnar inte i terminalloggar. På Wayland byter du
+`xclip -selection clipboard` mot `wl-copy`.
 
 ```bash
-kubectl -n monitoring get secret grafana-admin -o jsonpath='{.data.admin-password}' | base64 -d; echo
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo
+kubectl -n monitoring get secret grafana-admin -o jsonpath='{.data.admin-password}' | base64 -d | xclip -selection clipboard
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d | xclip -selection clipboard
 ```
 
 ## Hälsokoll på en minut

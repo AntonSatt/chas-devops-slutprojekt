@@ -306,7 +306,7 @@ fungerar bara från din `admin_cidr`:
 ```bash
 export KUBECONFIG=$PWD/$TF_VAR_cluster_name.kubeconfig
 kubectl -n argocd get applications
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d | xclip -selection clipboard
 kubectl -n argocd port-forward svc/argocd-server 8080:80
 ```
 
