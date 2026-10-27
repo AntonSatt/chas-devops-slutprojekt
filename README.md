@@ -1,28 +1,43 @@
 # Grupp 1 - slutprojekt DevOps fördjupning
 
-Kubernetes-kluster med 3 control planes i Hetzner Cloud och en dedikerad
-worker, byggt från GitLab CI med Terraform och Ansible.
+Ett produktionslikt Kubernetes-kluster byggt helt från kod: 3 control planes
+i Hetzner Cloud och en dedikerad bare metal-worker, uppsatt av GitLab CI med
+Terraform och Ansible och förvaltat med GitOps i Argo CD.
 
-Deadline 2026-10-25, Final Lab 2026-10-26. Alla ska kunna förklara alla delar.
+*A production-style k3s cluster on Hetzner Cloud plus a bare metal worker,
+built end to end from GitLab CI with Terraform, Ansible and Argo CD, with
+Prometheus, Grafana, Loki and alerting. School group project, documentation
+in Swedish.*
 
-Ny i projektet, eller vill du förstå hur allt hänger ihop? Bygg ett eget
-kluster från noll med [steg-för-steg-guiden](docs/steg-for-steg.md). Den
-visar också vilka delar som är klara.
+## Om projektet
 
-Ska du titta på, felsöka eller ändra det körande prod-klustret: se
-[drift](docs/drift.md). Där finns hur du kommer åt prod, en hälsokoll,
-var varje del ändras och felsökning steg för steg.
+Slutprojektet i kursen DevOps fördjupning på Chas Academy hösten 2026, byggt
+av fyra personer och godkänt på Final Lab 2026-10-26. Ansvaret var uppdelat
+i kluster, DNS och TLS; CI och secrets; GitOps, monitoring och larm; loggar.
+Vem som gjorde vad syns i commit-historiken.
 
-## Prod just nu
+- **Infrastruktur:** Terraform för servrar och brandvägg i Hetzner Cloud och
+  en wildcard-post i DNS via RFC 2136, med state i GitLab.
+- **Kluster:** Ansible installerar k3s med etcd på tre control planes och
+  ansluter den dedikerade workern som agent.
+- **GitOps:** Argo CD med app-of-apps. Egna Helm-charts för Gitea, Ghost,
+  MinIO och Synapse, plus Traefik, cert-manager och SealedSecrets.
+- **TLS:** cert-manager med Let's Encrypt via DNS-01 och ett wildcard-cert.
+- **Observability:** kube-prometheus-stack med Grafana, Loki med Alloy och
+  larm till Mattermost.
+- **CI/CD:** pipelinen validerar, bygger ett eget kluster per merge request,
+  uppdaterar prod från `main` och säkerhetskopierar SealedSecrets-nycklarna
+  på schema.
 
-| Vad | Adress |
-|---|---|
-| Grafana | https://grafana.group-1.doe25.chas-lab.dev |
-| Element (Synapse) | https://element.group-1.doe25.chas-lab.dev |
-| Ghost | https://ghost.group-1.doe25.chas-lab.dev |
+**Status:** klustret är nedtaget sedan Final Lab, så adresserna i
+dokumentationen svarar inte längre. Repot visar läget före
+examensuppgiften. Inga hemligheter finns här: SealedSecrets är krypterade
+med klustrets nyckel, som inte följer med, och runnerns krypterade
+variabler och workerns IP-adress är borttagna ur historiken.
 
-Argo CD, Prometheus och Alertmanager nås med port-forward. Hur, och
-inloggningarna, står i [drift](docs/drift.md#webbsidorna).
+Vill du förstå hur allt hänger ihop? [Steg-för-steg-guiden](docs/steg-for-steg.md)
+bygger ett eget kluster från noll, och [drift](docs/drift.md) visar hur prod
+sköttes: åtkomst, hälsokoll, var varje del ändras och felsökning.
 
 ## Arbetssätt
 
